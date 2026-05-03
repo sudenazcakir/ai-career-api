@@ -1,15 +1,20 @@
 const express = require("express");
+const path = require("path");
 const cors = require("cors");
 require("dotenv").config();
 
 const swaggerUi = require("swagger-ui-express");
 const swaggerJsdoc = require("swagger-jsdoc");
+const connectDB = require("./config/db");
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
+
+connectDB();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
 
 // ===== Swagger ayarı =====
 const options = {
@@ -35,11 +40,22 @@ app.get("/api/health", (req, res) => {
 
 // ===== ROUTES =====
 const matchRoutes = require("./routes/matchRoutes");
+const jobRoutes = require("./routes/jobRoutes");
+const cvRoutes = require("./routes/cvRoutes");
+const recommendationRoutes = require("./routes/recommendationRoutes");
+const analysisRoutes = require("./routes/analysisRoutes");
+
 app.use("/api", matchRoutes);
+app.use("/api", jobRoutes);
+app.use("/api/cvs", cvRoutes);
+app.use("/api", cvRoutes);
+app.use("/api", recommendationRoutes);
+app.use("/api", analysisRoutes);
 
 // ===== SERVER =====
 const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Frontend: http://localhost:${PORT}`);
   console.log(`Swagger: http://localhost:${PORT}/api-docs`);
 });
 

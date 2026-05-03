@@ -1,0 +1,202 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>AI Career Matching Platform - Project Summary</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        color: #111827;
+        line-height: 1.45;
+      }
+      h1 {
+        color: #0f766e;
+        font-size: 28px;
+      }
+      h2 {
+        color: #111827;
+        border-bottom: 1px solid #d1d5db;
+        padding-bottom: 4px;
+        margin-top: 24px;
+      }
+      ul {
+        margin-top: 8px;
+      }
+      code {
+        background: #f3f4f6;
+        padding: 2px 5px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>AI Career Matching Platform - Project Summary</h1>
+
+    <p>
+      Bu belge, AI Career Matching uygulamasında şu ana kadar geliştirilen
+      backend, frontend, veritabanı, API ve kullanıcı arayüzü özelliklerini
+      özetler.
+    </p>
+
+    <h2>1. Backend Altyapısı</h2>
+    <ul>
+      <li>Express.js tabanlı API projesi kuruldu.</li>
+      <li>Swagger API dokümantasyonu eklendi.</li>
+      <li>MongoDB Atlas bağlantısı yapıldı.</li>
+      <li>Adzuna API bağlantısı yapıldı.</li>
+      <li><code>.env</code> ile gizli bilgiler yönetiliyor.</li>
+      <li>Backend adresi: <code>http://localhost:5001</code></li>
+      <li>Swagger adresi: <code>http://localhost:5001/api-docs</code></li>
+    </ul>
+
+    <h2>2. Job Özellikleri</h2>
+    <ul>
+      <li>Adzuna API'den gerçek iş ilanları çekilebiliyor.</li>
+      <li>Çekilen iş ilanları MongoDB'ye kaydediliyor.</li>
+      <li>Duplicate kontrolü <code>title + company</code> üzerinden yapılıyor.</li>
+      <li><code>models/Job.js</code> ile Job modeli oluşturuldu.</li>
+      <li><code>GET /api/jobs/fetch</code> endpoint'i eklendi.</li>
+      <li><code>GET /api/jobs/filter</code> endpoint'i eklendi.</li>
+      <li>
+        Job filtreleme artık hard-coded veriyle değil, gerçek MongoDB verisiyle
+        çalışıyor.
+      </li>
+      <li>
+        Filtreleme parametreleri: <code>keyword</code>, <code>skill</code>,
+        <code>minMatch</code>, <code>sort</code>, <code>cvId</code>.
+      </li>
+    </ul>
+
+    <h2>3. CV Özellikleri</h2>
+    <ul>
+      <li><code>models/CV.js</code> ile CV modeli oluşturuldu.</li>
+      <li><code>POST /api/cvs</code> ile CV oluşturulabiliyor.</li>
+      <li><code>GET /api/cvs</code> ile CV listesi alınabiliyor.</li>
+      <li>CV bilgileri MongoDB'ye kaydediliyor.</li>
+      <li>CV id'si ile job match score hesaplanabiliyor.</li>
+    </ul>
+
+    <h2>4. Matching Sistemi</h2>
+    <ul>
+      <li><code>POST /api/match</code> endpoint'i eklendi.</li>
+      <li>CV skills ve job skills karşılaştırılıyor.</li>
+      <li>Match score hesaplanıyor.</li>
+      <li>Level değeri üretiliyor: Low, Medium, High.</li>
+      <li>Eşleşen skill'ler ve eksik skill'ler döndürülüyor.</li>
+      <li>Explainability alanı güçlendirildi.</li>
+    </ul>
+
+    <h2>5. Recommendation Sistemi</h2>
+    <ul>
+      <li>Recommendation endpoint'i önce manuel çalışıyordu.</li>
+      <li>Daha sonra gerçek MongoDB verisine bağlandı.</li>
+      <li><code>GET /api/recommendations?cvId=...</code> endpoint'i eklendi.</li>
+      <li>CV MongoDB'den çekiliyor.</li>
+      <li>Job kayıtları MongoDB'den çekiliyor.</li>
+      <li>CV skills ile job skills karşılaştırılarak en iyi işler öneriliyor.</li>
+      <li>En iyi 5 öneri döndürülüyor.</li>
+    </ul>
+
+    <h2>6. Best CV Özelliği</h2>
+    <ul>
+      <li><code>GET /api/best-cv/:jobId</code> endpoint'i eklendi.</li>
+      <li>Job MongoDB'den çekiliyor.</li>
+      <li>Tüm CV kayıtları MongoDB'den çekiliyor.</li>
+      <li>İlgili job için en iyi CV bulunuyor.</li>
+      <li>En iyi CV ve skor döndürülüyor.</li>
+    </ul>
+
+    <h2>7. Analysis Özelliği</h2>
+    <ul>
+      <li><code>POST /api/analysis</code> endpoint'i eklendi.</li>
+      <li>Eksik skill'lere göre öğrenme roadmap'i oluşturuluyor.</li>
+      <li>
+        Örnek çıktı: <code>Learn Docker basics -> practice -> build project</code>
+      </li>
+    </ul>
+
+    <h2>8. Skill Extractor Servisi</h2>
+    <ul>
+      <li><code>services/skillExtractor.js</code> oluşturuldu.</li>
+      <li>Job description içinden skill yakalama yapılıyor.</li>
+      <li>Desteklenen örnek skill'ler: Java, SQL, React, Node, Docker, Python.</li>
+    </ul>
+
+    <h2>9. Frontend Altyapısı</h2>
+    <ul>
+      <li>React ve Vite kuruldu.</li>
+      <li>Frontend adresi: <code>http://localhost:5173</code></li>
+      <li>Backend adresi: <code>http://localhost:5001</code></li>
+      <li>Vite proxy ile <code>/api</code> istekleri backend'e yönlendiriliyor.</li>
+    </ul>
+
+    <h2>10. Frontend Sayfaları</h2>
+    <ul>
+      <li>Overview</li>
+      <li>CV Studio</li>
+      <li>Job Explorer</li>
+      <li>AI Insights</li>
+      <li>My Account</li>
+    </ul>
+
+    <h2>11. Kullanıcı Kayıt ve Giriş Akışı</h2>
+    <ul>
+      <li>Site açıldığında kullanıcıya Sign Up / Sign In ekranı geliyor.</li>
+      <li>Kayıt için first name, last name, email, password ve telefon bilgisi alınıyor.</li>
+      <li>Telefon alanında bayraklı ülke kodu seçimi bulunuyor.</li>
+      <li>Kullanıcı verileri şimdilik localStorage'da saklanıyor.</li>
+    </ul>
+
+    <h2>12. Career Passport</h2>
+    <ul>
+      <li>Kullanıcının genel profesyonel profili olarak tasarlandı.</li>
+      <li>Kayıt sonrası kullanıcı Career Passport formuna yönlendiriliyor.</li>
+      <li>Skip now butonu ile form sonra doldurulabiliyor.</li>
+      <li>Form daha düzenli olması için bölümlere ayrıldı.</li>
+      <li>Bölümler: Career Direction, Education, Skills & Interests, Experience & Proof, Links.</li>
+      <li>
+        Alanlar: target role, location, work style, availability, salary expectation,
+        school, department, graduation year, GPA, skills, tools, languages, interests,
+        experience, projects, certificates, achievements, about me, portfolio,
+        LinkedIn, GitHub.
+      </li>
+    </ul>
+
+    <h2>13. My Account Sayfası</h2>
+    <ul>
+      <li>Sağ üstte hesap butonu eklendi.</li>
+      <li>My Account sayfası tasarlandı.</li>
+      <li>Kullanıcı bilgileri düzenlenebiliyor.</li>
+      <li>Profil fotoğrafı avatar üzerindeki kalem simgesiyle değiştirilebiliyor.</li>
+      <li>Career Passport düzenleme işlemi modal pencere içinde açılıyor.</li>
+      <li>Modal açıldığında arka plan bulanıklaştırılıyor.</li>
+    </ul>
+
+    <h2>14. UI / UX İyileştirmeleri</h2>
+    <ul>
+      <li>İlk basit arayüz modern dashboard yapısına dönüştürüldü.</li>
+      <li>Sidebar navigasyon eklendi.</li>
+      <li>Dashboard metrikleri eklendi.</li>
+      <li>Job sonuç kartları eklendi.</li>
+      <li>Recommendation listesi eklendi.</li>
+      <li>Match explanation ve roadmap panelleri oluşturuldu.</li>
+      <li>Career Passport formu daha düzenli hale getirildi.</li>
+      <li>My Account sayfası daha estetik hale getirildi.</li>
+    </ul>
+
+    <h2>15. Uygulamanın Şu An Yapabildikleri</h2>
+    <ul>
+      <li>Kullanıcı kayıt ve giriş akışı sunar.</li>
+      <li>Kullanıcı profesyonel profili oluşturabilir.</li>
+      <li>CV oluşturabilir ve listeleyebilir.</li>
+      <li>Adzuna'dan gerçek job verisi çekebilir.</li>
+      <li>Job verilerini MongoDB'ye kaydedebilir.</li>
+      <li>CV'ye göre job filtreleyebilir.</li>
+      <li>CV'ye göre job önerileri oluşturabilir.</li>
+      <li>Bir job için en iyi CV'yi bulabilir.</li>
+      <li>Skill match score hesaplayabilir.</li>
+      <li>Eksik skill'lere göre öğrenme planı oluşturabilir.</li>
+      <li>Tüm temel akışlar React arayüzünden kullanılabilir.</li>
+    </ul>
+  </body>
+</html>
