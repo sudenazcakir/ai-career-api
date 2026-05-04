@@ -41,7 +41,6 @@ router.get("/recommendations", async (req, res) => {
     const scoredJobs = jobs.map((job) => {
       const jobSkills = job.skills || [];
       const match = jobSkills.filter((skill) => cv.skills.includes(skill));
-
       const score = jobSkills.length
         ? Math.round((match.length / jobSkills.length) * 100)
         : 0;
@@ -66,7 +65,8 @@ router.get("/recommendations", async (req, res) => {
  * @swagger
  * /recommendations:
  *   post:
- *     summary: Get recommended jobs based on CV
+ *     summary: Legacy manual recommendation flow
+ *     description: Manual non-DB helper kept for compatibility. Current app flow uses GET /api/recommendations with cvId.
  *     tags: [Recommendation]
  *     requestBody:
  *       required: true
@@ -94,7 +94,6 @@ router.post("/recommendations", (req, res) => {
 
   const scoredJobs = jobs.map((job) => {
     const matching = job.skills.filter((skill) => cvSkills.includes(skill));
-
     const score = Math.round((matching.length / job.skills.length) * 100);
 
     return {
@@ -103,10 +102,7 @@ router.post("/recommendations", (req, res) => {
     };
   });
 
-  // yüksek skora göre sırala
   const sorted = scoredJobs.sort((a, b) => b.matchScore - a.matchScore);
-
-  // sadece en iyi 3 taneyi döndür
   const topJobs = sorted.slice(0, 3);
 
   res.json({

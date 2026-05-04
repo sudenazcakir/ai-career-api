@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const CV = require("../models/CV");
 
 const router = express.Router();
@@ -67,10 +68,112 @@ router.post("/", async (req, res) => {
 
 /**
  * @swagger
- * /best-cv:
+ * /cvs/{id}:
+ *   put:
+ *     summary: Update a CV
+ *     tags: [CVs]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: CV ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               skills:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Updated CV
+ */
+router.put("/:id", async (req, res) => {
+  try {
+    if (CV.db.readyState !== 1) {
+      return res.status(503).json({ error: "Database is not connected" });
+    }
+
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid CV id" });
+    }
+
+    const { title, skills } = req.body;
+    const updates = {};
+
+    if (title !== undefined) updates.title = title;
+    if (skills !== undefined) updates.skills = skills;
+
+    const cv = await CV.findByIdAndUpdate(id, updates, { new: true });
+    if (!cv) {
+      return res.status(404).json({ error: "CV not found" });
+    }
+
+    res.json({ success: true, data: cv });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /cvs/{id}:
+ *   delete:
+ *     summary: Delete a CV
+ *     tags: [CVs]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: CV ID
+ *     responses:
+ *       200:
+ *         description: Deleted CV
+ */
+router.delete("/:id", async (req, res) => {
+  try {
+    if (CV.db.readyState !== 1) {
+      return res.status(503).json({ error: "Database is not connected" });
+    }
+
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid CV id" });
+    }
+
+    const deleted = await CV.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ error: "CV not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "CV deleted",
+      data: deleted,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /cvs/best-cv:
  *   post:
- *     summary: Get best CV for a job
- *     tags: [CV]
+ *     summary: Legacy manual best-CV flow
+ *     description: Manual non-DB helper kept for compatibility. Current app flow uses GET /api/best-cv/{jobId}.
+ *     tags: [CVs]
  *     requestBody:
  *       required: true
  *       content:
@@ -98,7 +201,6 @@ router.post("/best-cv", (req, res) => {
 
   cvs.forEach((cv) => {
     const matching = jobSkills.filter((skill) => cv.skills.includes(skill));
-
     const score = Math.round((matching.length / jobSkills.length) * 100);
 
     if (score > bestScore) {

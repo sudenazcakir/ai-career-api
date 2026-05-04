@@ -1,12 +1,74 @@
 const express = require("express");
-const axios = require("axios");
+const mongoose = require("mongoose");
 const Job = require("../models/Job");
 const CV = require("../models/CV");
 const fetchAdzunaJobs = require("../services/adzunaService");
 const extractSkills = require("../services/skillExtractor");
 
 const router = express.Router();
-const jobs = [];
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function calculateMatchScore(jobSkills = [], userSkills = []) {
+  if (!Array.isArray(jobSkills) || jobSkills.length === 0) {
+    return 0;
+  }
+
+  const matches = jobSkills.filter((skill) => userSkills.includes(skill));
+  return Math.round((matches.length / jobSkills.length) * 100);
+}
+
+function buildJobDocument(job) {
+  const description = job.description || "";
+  const title = job.title || "";
+
+  return {
+    title,
+    description,
+    skills: extractSkills(`${title} ${description}`),
+    company: job.company?.display_name || "",
+    location: job.location?.display_name || "",
+    createdAt: job.created ? new Date(job.created) : new Date(),
+  };
+}
+
+async function saveAdzunaJobs(adzunaJobs) {
+  if (!adzunaJobs.length) return { imported: 0, updated: 0 };
+
+  const ops = adzunaJobs.map((job) => {
+    const doc = buildJobDocument(job);
+    return {
+      updateOne: {
+        filter: { title: doc.title, company: doc.company },
+        update: { $set: doc },
+        upsert: true,
+      },
+    };
+  });
+
+  try {
+    const result = await Job.bulkWrite(ops, { ordered: false });
+    return {
+      imported: result.upsertedCount,
+      updated: result.modifiedCount,
+    };
+  } catch (err) {
+    // ordered: false allows partial success; extract counts from the error result
+    if (err.result) {
+      const skipped = err.writeErrors?.length || 0;
+      if (skipped > 0) {
+        console.warn(`saveAdzunaJobs: ${skipped} operation(s) skipped due to write errors`);
+      }
+      return {
+        imported: err.result.upsertedCount || 0,
+        updated: err.result.modifiedCount || 0,
+      };
+    }
+    throw err;
+  }
+}
 
 /**
  * @swagger
@@ -18,8 +80,17 @@ const jobs = [];
  *       200:
  *         description: Job list
  */
-router.get("/jobs", (req, res) => {
-  res.json({ success: true, data: jobs });
+router.get("/jobs", async (req, res) => {
+  try {
+    if (Job.db.readyState === 1) {
+      const all = await Job.find().sort({ createdAt: -1 });
+      return res.json({ success: true, data: all });
+    }
+
+    return res.json({ success: true, data: [] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 /**
@@ -67,46 +138,61 @@ router.get("/jobs/filter", async (req, res) => {
       return res.status(503).json({ error: "Database is not connected" });
     }
 
-    let jobs = await Job.find();
+    const needsCvContext = Boolean(cvId || minMatch !== undefined || sort === "score");
 
-    // keyword
+    if (needsCvContext && !cvId) {
+      return res.status(400).json({
+        error: "cvId is required when using minMatch or sort=score",
+      });
+    }
+
+    let minMatchValue;
+    if (minMatch !== undefined) {
+      minMatchValue = Number(minMatch);
+      if (Number.isNaN(minMatchValue)) {
+        return res.status(400).json({ error: "minMatch must be a number" });
+      }
+    }
+
+    const query = {};
     if (keyword) {
-      jobs = jobs.filter((j) =>
-        j.title.toLowerCase().includes(keyword.toLowerCase())
-      );
+      query.title = { $regex: keyword, $options: "i" };
     }
-
-    // skill
     if (skill) {
-      jobs = jobs.filter((j) => j.skills.includes(skill));
+      query.skills = { $regex: `^${escapeRegex(skill)}$`, $options: "i" };
     }
 
-    // CV çek
+    let jobs = await Job.find(query);
+
     let userSkills = [];
     if (cvId) {
+      if (!mongoose.Types.ObjectId.isValid(cvId)) {
+        return res.status(400).json({ error: "Invalid cvId" });
+      }
+
       const cv = await CV.findById(cvId);
-      if (cv) userSkills = cv.skills;
+      if (!cv) {
+        return res.status(404).json({ error: "CV not found" });
+      }
+
+      userSkills = cv.skills || [];
+      jobs = jobs.map((job) => ({
+        ...job.toObject(),
+        matchScore: calculateMatchScore(job.skills, userSkills),
+      }));
     }
 
-    // match + minMatch
-    if (minMatch && userSkills.length) {
-      jobs = jobs
-        .map((j) => {
-          const match = j.skills.filter((s) => userSkills.includes(s));
-          const score = Math.round((match.length / j.skills.length) * 100);
-          return { ...j.toObject(), matchScore: score };
-        })
-        .filter((j) => j.matchScore >= Number(minMatch));
+    if (minMatchValue !== undefined) {
+      jobs = jobs.filter((job) => job.matchScore >= minMatchValue);
     }
 
-    // sort
     if (sort === "score") {
       jobs.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
     } else if (sort === "newest") {
       jobs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 
-    res.json({ jobs });
+    res.json({ success: true, data: jobs });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -137,19 +223,33 @@ router.get("/jobs/filter", async (req, res) => {
  *       201:
  *         description: Created job
  */
-router.post("/jobs", (req, res) => {
-  const { title, company, skills = [] } = req.body;
+router.post("/jobs", async (req, res) => {
+  try {
+    const { title, company, skills = [] } = req.body;
 
-  const job = {
-    id: jobs.length + 1,
-    title,
-    company,
-    skills,
-  };
+    if (Job.db.readyState !== 1) {
+      return res.status(503).json({ error: "Database is not connected" });
+    }
 
-  jobs.push(job);
+    if (!title || !company) {
+      return res.status(400).json({ error: "title and company are required" });
+    }
 
-  res.status(201).json({ success: true, data: job });
+    const existing = await Job.findOne({ title, company });
+    if (existing) {
+      return res.status(200).json({
+        success: true,
+        data: existing,
+        message: "Job already exists",
+      });
+    }
+
+    const created = await Job.create({ title, company, skills });
+
+    res.status(201).json({ success: true, data: created });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 /**
@@ -180,40 +280,15 @@ router.post("/jobs", (req, res) => {
 router.post("/jobs/import-adzuna", async (req, res) => {
   try {
     if (Job.db.readyState !== 1) {
-      return res.status(503).json({
-        success: false,
-        error: "Database is not connected",
-      });
+      return res.status(503).json({ error: "Database is not connected" });
     }
 
     const adzunaJobs = await fetchAdzunaJobs(req.body);
+    const { imported, updated } = await saveAdzunaJobs(adzunaJobs);
 
-    const jobsToSave = adzunaJobs.map((job) => {
-      const description = job.description || "";
-      const title = job.title || "";
-
-      return {
-        title,
-        description,
-        skills: extractSkills(`${title} ${description}`),
-        company: job.company?.display_name || "",
-        location: job.location?.display_name || "",
-        createdAt: job.created ? new Date(job.created) : new Date(),
-      };
-    });
-
-    const savedJobs = await Job.insertMany(jobsToSave);
-
-    res.status(201).json({
-      success: true,
-      imported: savedJobs.length,
-      jobs: savedJobs,
-    });
+    res.status(201).json({ success: true, imported, updated });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -230,35 +305,16 @@ router.get("/jobs/fetch", async (req, res) => {
       return res.status(503).json({ error: "Database is not connected" });
     }
 
-    const url = `https://api.adzuna.com/v1/api/jobs/gb/search/1?app_id=${process.env.ADZUNA_APP_ID}&app_key=${process.env.ADZUNA_APP_KEY}&what=developer`;
+    const adzunaJobs = await fetchAdzunaJobs();
+    const { imported, updated } = await saveAdzunaJobs(adzunaJobs);
 
-    const response = await axios.get(url);
-
-    const jobs = response.data.results;
-
-    for (const j of jobs) {
-      const skills = extractSkills(j.description);
-
-      // duplicate basit kontrol (title + company)
-      const exists = await Job.findOne({
-        title: j.title,
-        company: j.company?.display_name,
-      });
-
-      if (!exists) {
-        await Job.create({
-          title: j.title,
-          description: j.description,
-          skills,
-          company: j.company?.display_name,
-          location: j.location?.display_name,
-        });
-      }
-    }
-
-    res.json({ message: "Jobs fetched & saved" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.json({
+      success: true,
+      imported,
+      updated,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

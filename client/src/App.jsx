@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { FiCamera } from "react-icons/fi";
 
 const pages = [
   { id: "overview", label: "Overview" },
@@ -24,14 +25,14 @@ const emptyUser = {
 };
 
 const countryCodes = [
-  { code: "+90", label: "🇹🇷 +90" },
-  { code: "+1", label: "🇺🇸 +1" },
-  { code: "+44", label: "🇬🇧 +44" },
-  { code: "+49", label: "🇩🇪 +49" },
-  { code: "+33", label: "🇫🇷 +33" },
-  { code: "+31", label: "🇳🇱 +31" },
-  { code: "+39", label: "🇮🇹 +39" },
-  { code: "+34", label: "🇪🇸 +34" },
+  { code: "+90", label: "TR +90" },
+  { code: "+1", label: "US +1" },
+  { code: "+44", label: "UK +44" },
+  { code: "+49", label: "DE +49" },
+  { code: "+33", label: "FR +33" },
+  { code: "+31", label: "NL +31" },
+  { code: "+39", label: "IT +39" },
+  { code: "+34", label: "ES +34" },
 ];
 
 const emptyPassport = {
@@ -81,6 +82,14 @@ async function apiRequest(path, options = {}) {
   }
 
   return data;
+}
+
+function getBackendOrigin() {
+  if (typeof window === "undefined") {
+    return "http://localhost:5001";
+  }
+
+  return `${window.location.protocol}//${window.location.hostname}:5001`;
 }
 
 export default function App() {
@@ -155,7 +164,7 @@ export default function App() {
 
       setUser(savedUser);
       setStatus("Signed in");
-      setShowOnboarding(false);
+      setShowOnboarding(localStorage.getItem("careerPassportSkipped") !== "true");
       return;
     }
 
@@ -262,8 +271,8 @@ export default function App() {
       if (selectedCvId) params.set("cvId", selectedCvId);
 
       const data = await apiRequest(`/api/jobs/filter?${params.toString()}`);
-      setJobs(data.jobs || []);
-      setStatus(`${data.jobs?.length || 0} jobs loaded`);
+      setJobs(data.data || []);
+      setStatus(`${data.data?.length || 0} jobs loaded`);
     });
   }
 
@@ -372,7 +381,12 @@ export default function App() {
           ))}
         </nav>
 
-        <a className="doc-link" href="/api-docs" target="_blank" rel="noreferrer">
+        <a
+          className="doc-link"
+          href={`${getBackendOrigin()}/api-docs`}
+          target="_blank"
+          rel="noreferrer"
+        >
           Open Swagger
         </a>
       </aside>
@@ -380,7 +394,7 @@ export default function App() {
       <main className="workspace">
         <header className="workspace-header">
           <div>
-            <p className="eyebrow">Live backend connected</p>
+            <p className="eyebrow">Live backend demo</p>
             <h1>{pages.find((page) => page.id === activePage)?.label}</h1>
           </div>
           <div className="header-actions">
@@ -596,7 +610,7 @@ function PassportOnboarding({
       <header className="onboarding-head">
         <div>
           <p className="eyebrow">Career Passport</p>
-          <h1>Welcome, {user.firstName}. Let’s build your professional profile.</h1>
+          <h1>Welcome, {user.firstName}. Let's build your professional profile.</h1>
           <p>
             Add your education, skills, experience, goals, and portfolio details.
             You can edit everything later from My Account.
@@ -656,8 +670,15 @@ function AccountPage({
       <section className="account-hero">
         <label className="avatar-editor">
           {renderAvatar(accountForm)}
-          <input accept="image/*" type="file" onChange={handlePhotoChange} />
-          <span aria-hidden="true">✎</span>
+          <input
+            accept="image/*"
+            aria-label="Change profile photo"
+            type="file"
+            onChange={handlePhotoChange}
+          />
+          <span aria-hidden="true">
+            <FiCamera />
+          </span>
         </label>
         <div>
           <p className="eyebrow">My Account</p>

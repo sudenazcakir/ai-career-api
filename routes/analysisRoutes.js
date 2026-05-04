@@ -31,7 +31,7 @@ router.post("/analysis", (req, res) => {
   }
 
   const roadmap = missingSkills.map(
-    (skill) => `Learn ${skill} basics → practice → build project`
+    (skill) => `Learn ${skill} basics -> practice -> build project`
   );
 
   res.json({

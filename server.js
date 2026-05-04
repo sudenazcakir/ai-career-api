@@ -9,6 +9,7 @@ const connectDB = require("./config/db");
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+const FRONTEND_PORT = 5173;
 
 connectDB();
 
@@ -16,7 +17,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// ===== Swagger ayarı =====
+// Swagger setup
 const options = {
   definition: {
     openapi: "3.0.0",
@@ -27,35 +28,37 @@ const options = {
     },
     servers: [{ url: `http://localhost:${PORT}/api` }],
   },
-  apis: ["./routes/*.js"], // swagger yorumlarını buradan okuyacak
+  apis: ["./routes/*.js"],
 };
 
 const specs = swaggerJsdoc(options);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 
-// ===== Test endpoint =====
+// Health endpoint
 app.get("/api/health", (req, res) => {
   res.json({ success: true, message: "API is running" });
 });
 
-// ===== ROUTES =====
+// Routes
 const matchRoutes = require("./routes/matchRoutes");
 const jobRoutes = require("./routes/jobRoutes");
 const cvRoutes = require("./routes/cvRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
 const analysisRoutes = require("./routes/analysisRoutes");
+const analyticsRoutes = require("./routes/analyticsRoutes");
 
 app.use("/api", matchRoutes);
 app.use("/api", jobRoutes);
 app.use("/api/cvs", cvRoutes);
-app.use("/api", cvRoutes);
 app.use("/api", recommendationRoutes);
 app.use("/api", analysisRoutes);
+app.use("/api", analyticsRoutes);
 
-// ===== SERVER =====
+// Server
 const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Frontend: http://localhost:${PORT}`);
+  console.log(`Backend: http://localhost:${PORT}`);
+  console.log(`Frontend: http://localhost:${FRONTEND_PORT}`);
   console.log(`Swagger: http://localhost:${PORT}/api-docs`);
 });
 

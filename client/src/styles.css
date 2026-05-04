@@ -416,17 +416,23 @@ p {
 
 .avatar-editor span {
   position: absolute;
-  right: -4px;
-  bottom: -4px;
+  right: -6px;
+  bottom: -6px;
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   place-items: center;
   border: 2px solid white;
   border-radius: 999px;
   background: #0f766e;
   line-height: 1;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
+}
+
+.avatar-editor span svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.4;
 }
 
 .avatar-editor:hover .account-avatar {
