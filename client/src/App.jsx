@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  Chart as ChartJS,
+  Filler,
+  Legend,
+  LineElement,
+  PointElement,
+  RadialLinearScale,
+  Tooltip,
+} from "chart.js";
 import { FiCamera } from "react-icons/fi";
+import { Radar } from "react-chartjs-2";
+
+ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
 const pages = [
   { id: "overview", label: "Overview" },
@@ -59,11 +71,194 @@ const emptyPassport = {
   github: "",
 };
 
+const careerFields = [
+  {
+    label: "Frontend",
+    description: "User interfaces, components, responsive web apps",
+    keywords: [
+      "frontend",
+      "front end",
+      "react",
+      "vue",
+      "angular",
+      "javascript",
+      "typescript",
+      "html",
+      "css",
+      "tailwind",
+      "responsive",
+      "component",
+      "ui",
+      "ux",
+      "figma",
+    ],
+  },
+  {
+    label: "Backend",
+    description: "APIs, databases, auth, server-side systems",
+    keywords: [
+      "backend",
+      "back end",
+      "node",
+      "express",
+      "java",
+      "spring",
+      "api",
+      "rest",
+      "graphql",
+      "mongodb",
+      "postgresql",
+      "mysql",
+      "sql",
+      "auth",
+      "jwt",
+    ],
+  },
+  {
+    label: "Data & AI",
+    description: "Data analysis, ML concepts, analytics workflows",
+    keywords: [
+      "data",
+      "ai",
+      "artificial intelligence",
+      "machine learning",
+      "python",
+      "pandas",
+      "numpy",
+      "analytics",
+      "statistics",
+      "visualization",
+      "model",
+      "prediction",
+    ],
+  },
+  {
+    label: "DevOps & Cloud",
+    description: "Deployment, containers, CI/CD, cloud operations",
+    keywords: [
+      "devops",
+      "docker",
+      "kubernetes",
+      "ci",
+      "cd",
+      "github actions",
+      "deployment",
+      "linux",
+      "nginx",
+      "aws",
+      "azure",
+      "gcp",
+      "cloud",
+    ],
+  },
+  {
+    label: "Mobile",
+    description: "Native and cross-platform mobile development",
+    keywords: [
+      "mobile",
+      "react native",
+      "flutter",
+      "swift",
+      "kotlin",
+      "android",
+      "ios",
+      "xcode",
+      "app store",
+      "play store",
+    ],
+  },
+  {
+    label: "QA & Automation",
+    description: "Testing strategy, automation, quality workflows",
+    keywords: [
+      "qa",
+      "quality",
+      "test",
+      "testing",
+      "automation",
+      "jest",
+      "cypress",
+      "playwright",
+      "selenium",
+      "unit test",
+      "integration test",
+      "postman",
+    ],
+  },
+];
+
 function splitSkills(value) {
   return value
     .split(",")
     .map((skill) => skill.trim())
     .filter(Boolean);
+}
+
+function normalizeCareerText(value = "") {
+  return value
+    .toString()
+    .toLocaleLowerCase("tr-TR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ı/g, "i");
+}
+
+function getPassportText(passport, fields) {
+  return normalizeCareerText(fields.map((field) => passport[field] || "").join(" "));
+}
+
+function scoreCareerField(field, passport) {
+  const weightedSources = [
+    { fields: ["skills", "tools"], weight: 11 },
+    { fields: ["projects", "experience", "certificates"], weight: 8 },
+    { fields: ["targetTitle", "summary", "achievements", "interests"], weight: 6 },
+    { fields: ["department", "workStyle", "languages"], weight: 3 },
+  ];
+
+  const evidence = [];
+  let score = 18;
+
+  weightedSources.forEach((source) => {
+    const text = getPassportText(passport, source.fields);
+
+    field.keywords.forEach((keyword) => {
+      const normalizedKeyword = normalizeCareerText(keyword);
+      if (text.includes(normalizedKeyword)) {
+        score += source.weight;
+        if (!evidence.includes(keyword)) evidence.push(keyword);
+      }
+    });
+  });
+
+  const hasPassportData = Object.values(passport).some((value) =>
+    value?.toString().trim()
+  );
+
+  return {
+    ...field,
+    evidence: evidence.slice(0, 6),
+    score: hasPassportData ? Math.min(96, score) : 0,
+  };
+}
+
+function buildCareerMatrix(passport) {
+  const fields = careerFields
+    .map((field) => scoreCareerField(field, passport))
+    .sort((a, b) => b.score - a.score);
+
+  const topField = fields[0];
+  const average = Math.round(
+    fields.reduce((total, field) => total + field.score, 0) / fields.length
+  );
+
+  return {
+    average,
+    fields,
+    topField,
+    chartFields: careerFields.map((field) =>
+      fields.find((scoredField) => scoredField.label === field.label)
+    ),
+  };
 }
 
 async function apiRequest(path, options = {}) {
@@ -642,6 +837,49 @@ function AccountPage({
 }) {
   const [accountForm, setAccountForm] = useState(user);
   const [isPassportModalOpen, setIsPassportModalOpen] = useState(false);
+  // This local matrix is the no-AI baseline. If the backend cannot call OpenAI
+  // or the /api/career-matrix request fails, the chart still renders from this
+  // deterministic Career Passport keyword scoring.
+  const fallbackCareerMatrix = useMemo(() => buildCareerMatrix(passport), [passport]);
+  const [aiCareerMatrix, setAiCareerMatrix] = useState(null);
+  const [careerMatrixStatus, setCareerMatrixStatus] = useState("Analyzing passport");
+  const careerMatrix = aiCareerMatrix || fallbackCareerMatrix;
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadCareerMatrix() {
+      setCareerMatrixStatus("Analyzing passport");
+
+      try {
+        // Account page uses the backend AI-assisted analyzer first. The backend
+        // may return an OpenAI result or a rule-based fallback with the same
+        // shape, so the chart rendering code stays simple and stable.
+        const data = await apiRequest("/api/career-matrix", {
+          method: "POST",
+          body: JSON.stringify({ passport }),
+        });
+
+        if (!isActive) return;
+        setAiCareerMatrix(data.data);
+        setCareerMatrixStatus(
+          data.data?.source === "ai" ? "AI-assisted analysis" : "Rule-based fallback"
+        );
+      } catch (error) {
+        if (!isActive) return;
+        // If the request itself fails, keep the local rule-based matrix from
+        // buildCareerMatrix(passport) so the user still sees a useful graph.
+        setAiCareerMatrix(null);
+        setCareerMatrixStatus("Local analysis fallback");
+      }
+    }
+
+    loadCareerMatrix();
+
+    return () => {
+      isActive = false;
+    };
+  }, [passport]);
 
   function submitAccount(event) {
     event.preventDefault();
@@ -706,6 +944,11 @@ function AccountPage({
           <strong>{passport.skills || "Not added"}</strong>
         </article>
       </section>
+
+      <CareerMatrixPanel
+        careerMatrix={careerMatrix}
+        status={careerMatrixStatus}
+      />
 
       <section className="panel account-panel">
         <div className="section-head">
@@ -835,6 +1078,123 @@ function AccountPage({
         </div>
       )}
     </div>
+  );
+}
+
+function CareerMatrixPanel({ careerMatrix, status }) {
+  const hasMatrixData = careerMatrix.average > 0;
+  const chartData = {
+    labels: careerMatrix.chartFields.map((field) => field.label),
+    datasets: [
+      {
+        label: "Career fit",
+        data: careerMatrix.chartFields.map((field) => field.score),
+        backgroundColor: "rgba(20, 184, 166, 0.22)",
+        borderColor: "#14b8a6",
+        borderWidth: 2,
+        pointBackgroundColor: "#0f766e",
+        pointBorderColor: "#ecfeff",
+        pointHoverBackgroundColor: "#ecfeff",
+        pointHoverBorderColor: "#0f766e",
+        pointRadius: 4,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (context) => `${context.label}: ${context.formattedValue}/100`,
+        },
+      },
+    },
+    scales: {
+      r: {
+        angleLines: { color: "rgba(20, 184, 166, 0.18)" },
+        grid: { color: "rgba(148, 163, 184, 0.24)" },
+        pointLabels: {
+          color: "#dffcf6",
+          font: { size: 12, weight: "700" },
+        },
+        suggestedMin: 0,
+        suggestedMax: 100,
+        ticks: {
+          backdropColor: "transparent",
+          color: "rgba(226, 232, 240, 0.7)",
+          showLabelBackdrop: false,
+          stepSize: 20,
+        },
+      },
+    },
+  };
+
+  return (
+    <section className="grid items-center gap-[18px] overflow-hidden rounded-xl border border-teal-300/30 bg-[radial-gradient(circle_at_48%_48%,rgba(20,184,166,0.14),transparent_34%),linear-gradient(135deg,#0f172a_0%,#102a35_48%,#0f172a_100%)] p-[22px] text-white lg:grid-cols-[minmax(220px,0.72fr)_minmax(320px,1fr)_minmax(260px,0.82fr)]">
+      <div className="grid gap-3.5">
+        <p className="mb-2 text-xs font-black uppercase tracking-normal text-teal-300">
+          AI-Assisted Career Fit Matrix
+        </p>
+        <h2 className="text-[clamp(28px,4vw,48px)] font-bold leading-none">
+          {hasMatrixData ? careerMatrix.topField?.label : "Career direction"}
+        </h2>
+        <p className="text-slate-300 leading-relaxed">
+          Your Career Passport is analyzed with AI first, then backed by a
+          deterministic fallback so the chart stays reliable.
+        </p>
+        <span className="w-max rounded-full border border-teal-200/25 bg-teal-300/10 px-3 py-1 text-xs font-extrabold text-teal-100">
+          {status}
+        </span>
+        <div className="grid grid-cols-2 gap-2.5">
+          <article className="grid gap-1.5 rounded-[10px] border border-teal-200/25 bg-slate-950/55 p-3">
+            <span className="text-xs font-black uppercase text-teal-200">
+              Primary field
+            </span>
+            <strong className="text-xl">
+              {hasMatrixData ? careerMatrix.topField?.label : "Not enough data"}
+            </strong>
+          </article>
+          <article className="grid gap-1.5 rounded-[10px] border border-teal-200/25 bg-slate-950/55 p-3">
+            <span className="text-xs font-black uppercase text-teal-200">
+              Overall readiness
+            </span>
+            <strong className="text-xl">{careerMatrix.average}%</strong>
+          </article>
+        </div>
+      </div>
+
+      <div className="min-h-80 w-full lg:min-h-[360px]">
+        <Radar data={chartData} options={chartOptions} />
+      </div>
+
+      <div className="grid gap-2.5">
+        {careerMatrix.fields.slice(0, 4).map((field) => (
+          <article
+            className="grid gap-2 rounded-[10px] border border-slate-400/30 bg-slate-950/60 p-3"
+            key={field.label}
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-black uppercase text-teal-200">
+                {field.label}
+              </span>
+              <strong className="text-[28px] font-bold leading-none text-teal-300">
+                {field.score}
+              </strong>
+            </div>
+            <p className="text-[13px] leading-normal text-blue-100">
+              {field.description}
+            </p>
+            <small className="text-xs leading-normal text-slate-400">
+              {field.evidence.length
+                ? field.evidence.join(", ")
+                : "Waiting for Career Passport data"}
+            </small>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 

@@ -46,6 +46,7 @@ const cvRoutes = require("./routes/cvRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
 const analysisRoutes = require("./routes/analysisRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
+const careerMatrixRoutes = require("./routes/careerMatrixRoutes");
 
 app.use("/api", matchRoutes);
 app.use("/api", jobRoutes);
@@ -53,6 +54,7 @@ app.use("/api/cvs", cvRoutes);
 app.use("/api", recommendationRoutes);
 app.use("/api", analysisRoutes);
 app.use("/api", analyticsRoutes);
+app.use("/api", careerMatrixRoutes);
 
 // Server
 const server = app.listen(PORT, () => {
