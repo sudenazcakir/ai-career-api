@@ -7,6 +7,10 @@ const extractSkills = require("../services/skillExtractor");
 
 const router = express.Router();
 
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function calculateMatchScore(jobSkills = [], userSkills = []) {
   if (!Array.isArray(jobSkills) || jobSkills.length === 0) {
     return 0;
@@ -31,32 +35,39 @@ function buildJobDocument(job) {
 }
 
 async function saveAdzunaJobs(adzunaJobs) {
-  let imported = 0;
-  let updated = 0;
-  const saved = [];
+  if (!adzunaJobs.length) return { imported: 0, updated: 0 };
 
-  for (const job of adzunaJobs) {
+  const ops = adzunaJobs.map((job) => {
     const doc = buildJobDocument(job);
+    return {
+      updateOne: {
+        filter: { title: doc.title, company: doc.company },
+        update: { $set: doc },
+        upsert: true,
+      },
+    };
+  });
 
-    const existing = await Job.findOne({
-      title: doc.title,
-      company: doc.company,
-    });
-
-    let record;
-
-    if (existing) {
-      updated += 1;
-      record = await Job.findByIdAndUpdate(existing._id, doc, { new: true });
-    } else {
-      imported += 1;
-      record = await Job.create(doc);
+  try {
+    const result = await Job.bulkWrite(ops, { ordered: false });
+    return {
+      imported: result.upsertedCount,
+      updated: result.modifiedCount,
+    };
+  } catch (err) {
+    // ordered: false allows partial success; extract counts from the error result
+    if (err.result) {
+      const skipped = err.writeErrors?.length || 0;
+      if (skipped > 0) {
+        console.warn(`saveAdzunaJobs: ${skipped} operation(s) skipped due to write errors`);
+      }
+      return {
+        imported: err.result.upsertedCount || 0,
+        updated: err.result.modifiedCount || 0,
+      };
     }
-
-    saved.push(record);
+    throw err;
   }
-
-  return { imported, updated, saved };
 }
 
 /**
@@ -143,23 +154,15 @@ router.get("/jobs/filter", async (req, res) => {
       }
     }
 
-    let jobs = await Job.find();
-
+    const query = {};
     if (keyword) {
-      const normalizedKeyword = keyword.toLowerCase();
-      jobs = jobs.filter((job) =>
-        (job.title || "").toLowerCase().includes(normalizedKeyword)
-      );
+      query.title = { $regex: keyword, $options: "i" };
+    }
+    if (skill) {
+      query.skills = { $regex: `^${escapeRegex(skill)}$`, $options: "i" };
     }
 
-    if (skill) {
-      const normalizedSkill = skill.toLowerCase();
-      jobs = jobs.filter((job) =>
-        (job.skills || []).some(
-          (jobSkill) => jobSkill.toLowerCase() === normalizedSkill
-        )
-      );
-    }
+    let jobs = await Job.find(query);
 
     let userSkills = [];
     if (cvId) {
@@ -189,7 +192,7 @@ router.get("/jobs/filter", async (req, res) => {
       jobs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 
-    res.json({ success: true, jobs });
+    res.json({ success: true, data: jobs });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -277,21 +280,15 @@ router.post("/jobs", async (req, res) => {
 router.post("/jobs/import-adzuna", async (req, res) => {
   try {
     if (Job.db.readyState !== 1) {
-      return res.status(503).json({
-        success: false,
-        error: "Database is not connected",
-      });
+      return res.status(503).json({ error: "Database is not connected" });
     }
 
     const adzunaJobs = await fetchAdzunaJobs(req.body);
-    const { imported, updated, saved } = await saveAdzunaJobs(adzunaJobs);
+    const { imported, updated } = await saveAdzunaJobs(adzunaJobs);
 
-    res.status(201).json({ success: true, imported, updated, jobs: saved });
+    res.status(201).json({ success: true, imported, updated });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -309,13 +306,12 @@ router.get("/jobs/fetch", async (req, res) => {
     }
 
     const adzunaJobs = await fetchAdzunaJobs();
-    const { imported, updated, saved } = await saveAdzunaJobs(adzunaJobs);
+    const { imported, updated } = await saveAdzunaJobs(adzunaJobs);
 
     res.json({
       success: true,
       imported,
       updated,
-      jobs: saved,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

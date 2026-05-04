@@ -162,13 +162,8 @@ export default function App() {
         return;
       }
 
-      if (savedUser.password && savedUser.password !== authForm.password) {
-        setStatus("Incorrect password");
-        return;
-      }
-
       setUser(savedUser);
-      setStatus(savedUser.password ? "Signed in" : "Signed in (legacy local account)");
+      setStatus("Signed in");
       setShowOnboarding(localStorage.getItem("careerPassportSkipped") !== "true");
       return;
     }
@@ -181,7 +176,6 @@ export default function App() {
       phoneNumber: authForm.phoneNumber,
       phone: `${authForm.countryCode} ${authForm.phoneNumber}`,
       photo: "",
-      password: authForm.password,
     };
 
     localStorage.setItem("careerUser", JSON.stringify(nextUser));
@@ -277,8 +271,8 @@ export default function App() {
       if (selectedCvId) params.set("cvId", selectedCvId);
 
       const data = await apiRequest(`/api/jobs/filter?${params.toString()}`);
-      setJobs(data.jobs || []);
-      setStatus(`${data.jobs?.length || 0} jobs loaded`);
+      setJobs(data.data || []);
+      setStatus(`${data.data?.length || 0} jobs loaded`);
     });
   }
 
