@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const Job = require("../models/Job");
 const CV = require("../models/CV");
 
@@ -33,7 +34,11 @@ router.get("/recommendations", async (req, res) => {
       return res.status(503).json({ error: "Database is not connected" });
     }
 
-    const cv = await CV.findById(cvId);
+    if (!mongoose.Types.ObjectId.isValid(cvId)) {
+      return res.status(400).json({ error: "Invalid cvId" });
+    }
+
+    const cv = await CV.findOne({ _id: cvId, owner: req.user._id });
     if (!cv) return res.status(404).json({ error: "CV not found" });
 
     const jobs = await Job.find();

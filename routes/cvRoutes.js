@@ -4,6 +4,26 @@ const CV = require("../models/CV");
 
 const router = express.Router();
 
+function normalizeSkills(skills = []) {
+  return [...new Set(skills.map((skill) => String(skill).trim()).filter(Boolean))];
+}
+
+function validateCvPayload({ title, skills }, partial = false) {
+  if (!partial && !title) {
+    return "title is required";
+  }
+
+  if (title !== undefined && !String(title).trim()) {
+    return "title cannot be empty";
+  }
+
+  if (skills !== undefined && !Array.isArray(skills)) {
+    return "skills must be an array";
+  }
+
+  return null;
+}
+
 /**
  * @swagger
  * /cvs:
@@ -20,7 +40,7 @@ router.get("/", async (req, res) => {
       return res.status(503).json({ error: "Database is not connected" });
     }
 
-    const cvs = await CV.find().sort({ _id: -1 });
+    const cvs = await CV.find({ owner: req.user._id }).sort({ _id: -1 });
 
     res.json({ success: true, data: cvs });
   } catch (error) {
@@ -58,7 +78,16 @@ router.post("/", async (req, res) => {
     }
 
     const { title, skills = [] } = req.body;
-    const cv = await CV.create({ title, skills });
+    const validationError = validateCvPayload({ title, skills });
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
+    }
+
+    const cv = await CV.create({
+      owner: req.user._id,
+      title: title.trim(),
+      skills: normalizeSkills(skills),
+    });
 
     res.status(201).json({ success: true, data: cv });
   } catch (error) {
@@ -108,12 +137,21 @@ router.put("/:id", async (req, res) => {
     }
 
     const { title, skills } = req.body;
+    const validationError = validateCvPayload({ title, skills }, true);
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
+    }
+
     const updates = {};
 
-    if (title !== undefined) updates.title = title;
-    if (skills !== undefined) updates.skills = skills;
+    if (title !== undefined) updates.title = title.trim();
+    if (skills !== undefined) updates.skills = normalizeSkills(skills);
 
-    const cv = await CV.findByIdAndUpdate(id, updates, { new: true });
+    const cv = await CV.findOneAndUpdate(
+      { _id: id, owner: req.user._id },
+      updates,
+      { new: true }
+    );
     if (!cv) {
       return res.status(404).json({ error: "CV not found" });
     }
@@ -152,7 +190,7 @@ router.delete("/:id", async (req, res) => {
       return res.status(400).json({ error: "Invalid CV id" });
     }
 
-    const deleted = await CV.findByIdAndDelete(id);
+    const deleted = await CV.findOneAndDelete({ _id: id, owner: req.user._id });
     if (!deleted) {
       return res.status(404).json({ error: "CV not found" });
     }

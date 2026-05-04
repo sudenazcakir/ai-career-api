@@ -3,6 +3,7 @@ const react = require("@vitejs/plugin-react");
 
 module.exports = defineConfig({
   root: "client",
+  envDir: __dirname,
   plugins: [react()],
   server: {
     port: 5173,

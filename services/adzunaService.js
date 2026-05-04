@@ -1,6 +1,6 @@
 const axios = require("axios");
 
-async function fetchAdzunaJobs({
+async function fetchAdzunaSearch({
   country = "gb",
   page = 1,
   keyword = "developer",
@@ -25,7 +25,14 @@ async function fetchAdzunaJobs({
     }
   );
 
-  return response.data.results || [];
+  return response.data;
 }
+
+async function fetchAdzunaJobs(options = {}) {
+  const data = await fetchAdzunaSearch(options);
+  return data.results || [];
+}
+
+fetchAdzunaJobs.fetchSearch = fetchAdzunaSearch;
 
 module.exports = fetchAdzunaJobs;

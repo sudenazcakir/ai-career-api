@@ -1,4 +1,5 @@
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "..", ".env") });
 const mongoose = require("mongoose");
 const CV = require("../models/CV");
 
@@ -14,7 +15,7 @@ async function main() {
   const result = await CV.findOneAndUpdate(
     { title: demoCV.title },
     demoCV,
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
   );
 
   console.log(`Demo CV ready: ${result.title}`);
