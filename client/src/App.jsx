@@ -24,14 +24,14 @@ const emptyUser = {
 };
 
 const countryCodes = [
-  { code: "+90", label: "🇹🇷 +90" },
-  { code: "+1", label: "🇺🇸 +1" },
-  { code: "+44", label: "🇬🇧 +44" },
-  { code: "+49", label: "🇩🇪 +49" },
-  { code: "+33", label: "🇫🇷 +33" },
-  { code: "+31", label: "🇳🇱 +31" },
-  { code: "+39", label: "🇮🇹 +39" },
-  { code: "+34", label: "🇪🇸 +34" },
+  { code: "+90", label: "TR +90" },
+  { code: "+1", label: "US +1" },
+  { code: "+44", label: "UK +44" },
+  { code: "+49", label: "DE +49" },
+  { code: "+33", label: "FR +33" },
+  { code: "+31", label: "NL +31" },
+  { code: "+39", label: "IT +39" },
+  { code: "+34", label: "ES +34" },
 ];
 
 const emptyPassport = {
@@ -81,6 +81,14 @@ async function apiRequest(path, options = {}) {
   }
 
   return data;
+}
+
+function getBackendOrigin() {
+  if (typeof window === "undefined") {
+    return "http://localhost:5001";
+  }
+
+  return `${window.location.protocol}//${window.location.hostname}:5001`;
 }
 
 export default function App() {
@@ -153,9 +161,14 @@ export default function App() {
         return;
       }
 
+      if (savedUser.password && savedUser.password !== authForm.password) {
+        setStatus("Incorrect password");
+        return;
+      }
+
       setUser(savedUser);
-      setStatus("Signed in");
-      setShowOnboarding(false);
+      setStatus(savedUser.password ? "Signed in" : "Signed in (legacy local account)");
+      setShowOnboarding(localStorage.getItem("careerPassportSkipped") !== "true");
       return;
     }
 
@@ -167,6 +180,7 @@ export default function App() {
       phoneNumber: authForm.phoneNumber,
       phone: `${authForm.countryCode} ${authForm.phoneNumber}`,
       photo: "",
+      password: authForm.password,
     };
 
     localStorage.setItem("careerUser", JSON.stringify(nextUser));
@@ -372,7 +386,12 @@ export default function App() {
           ))}
         </nav>
 
-        <a className="doc-link" href="/api-docs" target="_blank" rel="noreferrer">
+        <a
+          className="doc-link"
+          href={`${getBackendOrigin()}/api-docs`}
+          target="_blank"
+          rel="noreferrer"
+        >
           Open Swagger
         </a>
       </aside>
@@ -380,7 +399,7 @@ export default function App() {
       <main className="workspace">
         <header className="workspace-header">
           <div>
-            <p className="eyebrow">Live backend connected</p>
+            <p className="eyebrow">Live backend demo</p>
             <h1>{pages.find((page) => page.id === activePage)?.label}</h1>
           </div>
           <div className="header-actions">
@@ -596,7 +615,7 @@ function PassportOnboarding({
       <header className="onboarding-head">
         <div>
           <p className="eyebrow">Career Passport</p>
-          <h1>Welcome, {user.firstName}. Let’s build your professional profile.</h1>
+          <h1>Welcome, {user.firstName}. Let's build your professional profile.</h1>
           <p>
             Add your education, skills, experience, goals, and portfolio details.
             You can edit everything later from My Account.
@@ -657,7 +676,7 @@ function AccountPage({
         <label className="avatar-editor">
           {renderAvatar(accountForm)}
           <input accept="image/*" type="file" onChange={handlePhotoChange} />
-          <span aria-hidden="true">✎</span>
+          <span aria-hidden="true">Edit</span>
         </label>
         <div>
           <p className="eyebrow">My Account</p>
