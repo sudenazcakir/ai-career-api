@@ -169,11 +169,11 @@ router.delete("/:id", async (req, res) => {
 
 /**
  * @swagger
- * /best-cv:
+ * /cvs/best-cv:
  *   post:
  *     summary: Legacy manual best-CV flow
  *     description: Manual non-DB helper kept for compatibility. Current app flow uses GET /api/best-cv/{jobId}.
- *     tags: [CV]
+ *     tags: [CVs]
  *     requestBody:
  *       required: true
  *       content:
