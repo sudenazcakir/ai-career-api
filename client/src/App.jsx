@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { FiCamera } from "react-icons/fi";
 
 const pages = [
   { id: "overview", label: "Overview" },
@@ -675,8 +676,15 @@ function AccountPage({
       <section className="account-hero">
         <label className="avatar-editor">
           {renderAvatar(accountForm)}
-          <input accept="image/*" type="file" onChange={handlePhotoChange} />
-          <span aria-hidden="true">Edit</span>
+          <input
+            accept="image/*"
+            aria-label="Change profile photo"
+            type="file"
+            onChange={handlePhotoChange}
+          />
+          <span aria-hidden="true">
+            <FiCamera />
+          </span>
         </label>
         <div>
           <p className="eyebrow">My Account</p>
