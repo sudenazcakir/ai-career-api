@@ -1,6 +1,8 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const Job = require("../models/Job");
 const CV = require("../models/CV");
+const { scoreMatch, scoreSkillsOnly } = require("../services/matchService");
 
 const router = express.Router();
 
@@ -8,80 +10,58 @@ const router = express.Router();
  * @swagger
  * /match:
  *   post:
- *     summary: Calculate match score between CV and Job
+ *     summary: Calculate skill-based match score between two skill arrays
  *     tags: [Match]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               cvSkills:
- *                 type: array
- *                 items:
- *                   type: string
- *               jobSkills:
- *                 type: array
- *                 items:
- *                   type: string
- *     responses:
- *       200:
- *         description: Match result
  */
 router.post("/match", (req, res) => {
   const { cvSkills, jobSkills } = req.body;
 
-  if (!cvSkills || !jobSkills) {
-    return res.status(400).json({ error: "Missing data" });
+  if (!Array.isArray(cvSkills) || !Array.isArray(jobSkills)) {
+    return res.status(400).json({ error: "cvSkills and jobSkills must be arrays" });
   }
 
-  // eşleşen skilller
-  const matchingSkills = jobSkills.filter((skill) => cvSkills.includes(skill));
+  const result = scoreSkillsOnly({ cvSkills, jobSkills });
+  res.json(result);
+});
 
-  // eksik skilller
-  const missingSkills = jobSkills.filter((skill) => !cvSkills.includes(skill));
+/**
+ * @swagger
+ * /match/full:
+ *   post:
+ *     summary: Full weighted match between a saved CV and a saved Job (60% skill + 25% experience + 15% role)
+ *     tags: [Match]
+ */
+router.post("/match/full", async (req, res) => {
+  try {
+    const { cvId, jobId } = req.body;
 
-  // skor
-  const score = Math.round((matchingSkills.length / jobSkills.length) * 100);
+    if (!cvId || !jobId) {
+      return res.status(400).json({ error: "cvId and jobId are required" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(cvId) || !mongoose.Types.ObjectId.isValid(jobId)) {
+      return res.status(400).json({ error: "Invalid cvId or jobId" });
+    }
 
-  // level
-  let level = "Low";
-  if (score > 70) level = "High";
-  else if (score > 40) level = "Medium";
+    const [cv, job] = await Promise.all([
+      CV.findOne({ _id: cvId, owner: req.user._id }),
+      Job.findById(jobId),
+    ]);
 
-  // explain
-  const explanation = `
-Match Score: ${score}%
-Matched Skills: ${matchingSkills.join(", ")}
-Missing Skills: ${missingSkills.join(", ")}
-`;
+    if (!cv)  return res.status(404).json({ error: "CV not found" });
+    if (!job) return res.status(404).json({ error: "Job not found" });
 
-  res.json({
-    matchScore: score,
-    level,
-    matchingSkills,
-    missingSkills,
-    explanation,
-  });
+    res.json(scoreMatch({ cv, job }));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 /**
  * @swagger
  * /best-cv/{jobId}:
  *   get:
- *     summary: Get best CV for a job
+ *     summary: Get the best-matching CV for a job using weighted score
  *     tags: [Match]
- *     parameters:
- *       - in: path
- *         name: jobId
- *         required: true
- *         schema:
- *           type: string
- *         description: Job ID
- *     responses:
- *       200:
- *         description: Best CV result
  */
 router.get("/best-cv/:jobId", async (req, res) => {
   try {
@@ -93,25 +73,25 @@ router.get("/best-cv/:jobId", async (req, res) => {
     if (!job) return res.status(404).json({ error: "Job not found" });
 
     const cvs = await CV.find({ owner: req.user._id });
+    if (!cvs.length) return res.json({ cv: null, matchScore: 0, reason: "No CVs found" });
 
-    let bestCv = null;
-    let bestScore = -1;
-    const jobSkills = job.skills || [];
+    let best = null;
+    let bestResult = null;
 
-    cvs.forEach((cv) => {
-      const match = jobSkills.filter((skill) => cv.skills.includes(skill));
-
-      const score = jobSkills.length
-        ? Math.round((match.length / jobSkills.length) * 100)
-        : 0;
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestCv = cv;
+    for (const cv of cvs) {
+      const result = scoreMatch({ cv, job });
+      if (!best || result.matchScore > bestResult.matchScore) {
+        best = cv;
+        bestResult = result;
       }
-    });
+    }
 
-    res.json({ bestCv, score: Math.max(bestScore, 0) });
+    res.json({
+      cv:        best,
+      matchScore: bestResult.matchScore,
+      reason:    bestResult.explanation,
+      breakdown: bestResult.breakdown,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

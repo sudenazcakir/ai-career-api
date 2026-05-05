@@ -48,6 +48,13 @@ export function calculateMatch(payload) {
   });
 }
 
+export function calculateFullMatch({ cvId, jobId }) {
+  return apiRequest("/api/match/full", {
+    method: "POST",
+    body: JSON.stringify({ cvId, jobId }),
+  });
+}
+
 export function buildRoadmap(payload) {
   return apiRequest("/api/analysis", {
     method: "POST",
