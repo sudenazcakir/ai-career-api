@@ -60,10 +60,10 @@ export default function SkillGapPage({ jobs, recommendations, selectedCv, setAct
           </div>
           <button
             type="button"
-            className="!bg-teal-400 !text-slate-950 hover:!bg-teal-300 shrink-0"
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-teal-400 px-3.5 text-center font-bold text-slate-950 transition hover:bg-teal-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
             onClick={() => setActivePage("roadmap")}
           >
-            <FiMap style={{ display: "inline", marginRight: 6 }} />
+            <FiMap className="h-4 w-4 shrink-0" />
             View Roadmap
           </button>
         </div>

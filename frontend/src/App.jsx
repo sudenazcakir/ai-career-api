@@ -14,6 +14,7 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
+import { flushSync } from "react-dom";
 import AccountPage from "./pages/AccountPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import ApplicationsPage from "./pages/ApplicationsPage";
@@ -21,6 +22,7 @@ import AuthPage from "./pages/AuthPage";
 import CvPage from "./pages/CvPage";
 import InsightsPage from "./pages/InsightsPage";
 import JobsPage from "./pages/JobsPage";
+import NotFoundPage from "./pages/NotFoundPage";
 import OverviewPage from "./pages/OverviewPage";
 import PassportOnboarding from "./pages/PassportOnboarding";
 import RoadmapPage from "./pages/RoadmapPage";
@@ -77,6 +79,14 @@ function getLoginPathFor(pathname, search = "") {
   return `/login?redirect=${encodeURIComponent(target)}`;
 }
 
+function shouldUseViewTransition() {
+  return (
+    typeof document !== "undefined" &&
+    typeof document.startViewTransition === "function" &&
+    !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -121,19 +131,56 @@ export default function App() {
   const isBusy = Boolean(pendingAction);
   const activePage =
     pages.find((page) => page.path === location.pathname) || pages[0];
+  const pageTitle = isProtectedPath(location.pathname) || location.pathname === "/"
+    ? activePage.label
+    : "Page not found";
   const redirectPath = getSafeRedirect(searchParams);
   const destinationPath = isProtectedPath(location.pathname)
     ? `${location.pathname}${location.search}`
     : redirectPath;
   const currentAuthMode = location.pathname === "/login" ? "login" : "register";
 
+  function smoothNavigate(to, options) {
+    const currentPath = `${location.pathname}${location.search}`;
+    if (to === currentPath || to === location.pathname) return;
+
+    if (!shouldUseViewTransition()) {
+      navigate(to, options);
+      return;
+    }
+
+    document.documentElement.classList.add("view-transition-running");
+    const transition = document.startViewTransition(() => {
+      flushSync(() => navigate(to, options));
+    });
+    transition.finished.finally(() => {
+      document.documentElement.classList.remove("view-transition-running");
+    });
+  }
+
+  function handleRouteClick(event, to) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.shiftKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    smoothNavigate(to);
+  }
+
   function navigatePage(pageId) {
-    navigate(pageById[pageId]?.path || DEFAULT_AUTHENTICATED_PATH);
+    smoothNavigate(pageById[pageId]?.path || DEFAULT_AUTHENTICATED_PATH);
   }
 
   function changeAuthMode(nextMode) {
     setAuthErrors({});
-    navigate(`${nextMode === "login" ? "/login" : "/register"}${location.search}`, {
+    smoothNavigate(`${nextMode === "login" ? "/login" : "/register"}${location.search}`, {
       replace: true,
     });
   }
@@ -475,13 +522,24 @@ export default function App() {
           }
         />
         <Route path="/" element={<Navigate to="/login" replace />} />
+        {pages.map((page) => (
+          <Route
+            element={
+              <Navigate
+                to={getLoginPathFor(location.pathname, location.search)}
+                replace
+              />
+            }
+            key={page.id}
+            path={page.path}
+          />
+        ))}
         <Route
           path="*"
           element={
-            <Navigate
-              to={getLoginPathFor(location.pathname, location.search)}
-              replace
-            />
+            <div className="route-transition" key={location.pathname}>
+              <NotFoundPage />
+            </div>
           }
         />
       </Routes>
@@ -520,6 +578,7 @@ export default function App() {
                 `${ui.navButton} ${isActive ? ui.navButtonActive : ""}`
               }
               key={page.id}
+              onClick={(event) => handleRouteClick(event, page.path)}
               to={page.path}
             >
               {page.label}
@@ -532,6 +591,7 @@ export default function App() {
                 `${ui.navButton} ${isActive ? ui.navButtonActive : ""}`
               }
               key={page.id}
+              onClick={(event) => handleRouteClick(event, page.path)}
               to={page.path}
             >
               {page.label}
@@ -544,6 +604,7 @@ export default function App() {
                 `${ui.navButton} ${isActive ? ui.navButtonActive : ""}`
               }
               key={page.id}
+              onClick={(event) => handleRouteClick(event, page.path)}
               to={page.path}
             >
               {page.label}
@@ -566,7 +627,7 @@ export default function App() {
           <div>
             <p className={ui.eyebrow}>Live backend demo</p>
             <h1 className={ui.pageTitle}>
-              {activePage.label}
+              {pageTitle}
             </h1>
           </div>
           <div className={ui.headerActions}>
@@ -584,142 +645,147 @@ export default function App() {
           </div>
         </header>
 
-        <Routes>
-          <Route path="/" element={<Navigate to={DEFAULT_AUTHENTICATED_PATH} replace />} />
-          <Route path="/login" element={<Navigate to={destinationPath} replace />} />
-          <Route path="/register" element={<Navigate to={destinationPath} replace />} />
-          <Route
-            path="/dashboard"
-            element={
-              <OverviewPage
-                cvs={cvs}
-                jobs={jobs}
-                recommendations={recommendations}
-                selectedCv={selectedCv}
-                topScore={topScore}
-                setActivePage={navigatePage}
-                fetchJobs={fetchJobs}
-                loadRecommendations={loadRecommendations}
-                isBusy={isBusy}
-              />
-            }
-          />
-          <Route
-            path="/cvs"
-            element={
-              <CvPage
-                cvs={cvs}
-                cvForm={cvForm}
-                selectedCvId={selectedCvId}
-                setCvForm={setCvForm}
-                setSelectedCvId={setSelectedCvId}
-                createCv={createCv}
-                isBusy={isBusy}
-              />
-            }
-          />
-          <Route
-            path="/jobs"
-            element={
-              <JobsPage
-                filterForm={filterForm}
-                setFilterForm={setFilterForm}
-                selectedCv={selectedCv}
-                jobs={jobs}
-                fetchJobs={fetchJobs}
-                filterJobs={filterJobs}
-                loadRecommendations={loadRecommendations}
-                isBusy={isBusy}
-              />
-            }
-          />
-          <Route
-            path="/skill-gaps"
-            element={
-              <SkillGapPage
-                jobs={jobs}
-                recommendations={recommendations}
-                selectedCv={selectedCv}
-                setActivePage={navigatePage}
-              />
-            }
-          />
-          <Route
-            path="/roadmap"
-            element={
-              <RoadmapPage
-                jobs={jobs}
-                recommendations={recommendations}
-                selectedCv={selectedCv}
-                analyzeGaps={analyzeGaps}
-                analysisResult={analysisResult}
-                matchResult={matchResult}
-              />
-            }
-          />
-          <Route
-            path="/applications"
-            element={
-              <ApplicationsPage
-                applications={applications}
-                applicationStatuses={applicationStatuses}
-                selectedCvId={selectedCvId}
-                trackApplication={handleTrackApplication}
-                updateApplicationStatus={handleUpdateApplicationStatus}
-                setActivePage={navigatePage}
-              />
-            }
-          />
-          <Route
-            path="/trends"
-            element={
-              <AnalyticsPage
-                applications={applications}
-                jobs={jobs}
-                recommendations={recommendations}
-                skillAnalytics={skillAnalytics}
-                trendAnalytics={trendAnalytics}
-                loadAnalytics={loadAnalytics}
-              />
-            }
-          />
-          <Route
-            path="/insights"
-            element={
-              <InsightsPage
-                matchForm={matchForm}
-                setMatchForm={setMatchForm}
-                runMatch={runMatch}
-                analyzeGaps={analyzeGaps}
-                findBestCv={findBestCv}
-                matchResult={matchResult}
-                analysisResult={analysisResult}
-                bestCvResult={bestCvResult}
-                recommendations={recommendations}
-                skillAnalytics={skillAnalytics}
-                trendAnalytics={trendAnalytics}
-                loadAnalytics={loadAnalytics}
-                isBusy={isBusy}
-              />
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <AccountPage
-                passport={passport}
-                savePassport={savePassport}
-                setPassport={setPassport}
-                signOut={signOut}
-                updateUser={updateUser}
-                user={user}
-                renderAvatar={renderAvatar}
-                isBusy={isBusy}
-              />
-            }
-          />
-          <Route path="*" element={<Navigate to={DEFAULT_AUTHENTICATED_PATH} replace />} />
-        </Routes>
+        <div className="route-transition" key={location.pathname}>
+          <Routes>
+            <Route path="/" element={<Navigate to={DEFAULT_AUTHENTICATED_PATH} replace />} />
+            <Route path="/login" element={<Navigate to={destinationPath} replace />} />
+            <Route path="/register" element={<Navigate to={destinationPath} replace />} />
+            <Route
+              path="/dashboard"
+              element={
+                <OverviewPage
+                  cvs={cvs}
+                  jobs={jobs}
+                  recommendations={recommendations}
+                  selectedCv={selectedCv}
+                  topScore={topScore}
+                  setActivePage={navigatePage}
+                  fetchJobs={fetchJobs}
+                  loadRecommendations={loadRecommendations}
+                  isBusy={isBusy}
+                />
+              }
+            />
+            <Route
+              path="/cvs"
+              element={
+                <CvPage
+                  cvs={cvs}
+                  cvForm={cvForm}
+                  selectedCvId={selectedCvId}
+                  setCvForm={setCvForm}
+                  setSelectedCvId={setSelectedCvId}
+                  createCv={createCv}
+                  isBusy={isBusy}
+                />
+              }
+            />
+            <Route
+              path="/jobs"
+              element={
+                <JobsPage
+                  filterForm={filterForm}
+                  setFilterForm={setFilterForm}
+                  selectedCv={selectedCv}
+                  jobs={jobs}
+                  fetchJobs={fetchJobs}
+                  filterJobs={filterJobs}
+                  loadRecommendations={loadRecommendations}
+                  isBusy={isBusy}
+                />
+              }
+            />
+            <Route
+              path="/skill-gaps"
+              element={
+                <SkillGapPage
+                  jobs={jobs}
+                  recommendations={recommendations}
+                  selectedCv={selectedCv}
+                  setActivePage={navigatePage}
+                />
+              }
+            />
+            <Route
+              path="/roadmap"
+              element={
+                <RoadmapPage
+                  jobs={jobs}
+                  recommendations={recommendations}
+                  selectedCv={selectedCv}
+                  analyzeGaps={analyzeGaps}
+                  analysisResult={analysisResult}
+                  matchResult={matchResult}
+                />
+              }
+            />
+            <Route
+              path="/applications"
+              element={
+                <ApplicationsPage
+                  applications={applications}
+                  applicationStatuses={applicationStatuses}
+                  selectedCvId={selectedCvId}
+                  trackApplication={handleTrackApplication}
+                  updateApplicationStatus={handleUpdateApplicationStatus}
+                  setActivePage={navigatePage}
+                />
+              }
+            />
+            <Route
+              path="/trends"
+              element={
+                <AnalyticsPage
+                  applications={applications}
+                  jobs={jobs}
+                  recommendations={recommendations}
+                  skillAnalytics={skillAnalytics}
+                  trendAnalytics={trendAnalytics}
+                  loadAnalytics={loadAnalytics}
+                />
+              }
+            />
+            <Route
+              path="/insights"
+              element={
+                <InsightsPage
+                  matchForm={matchForm}
+                  setMatchForm={setMatchForm}
+                  runMatch={runMatch}
+                  analyzeGaps={analyzeGaps}
+                  findBestCv={findBestCv}
+                  matchResult={matchResult}
+                  analysisResult={analysisResult}
+                  bestCvResult={bestCvResult}
+                  recommendations={recommendations}
+                  skillAnalytics={skillAnalytics}
+                  trendAnalytics={trendAnalytics}
+                  loadAnalytics={loadAnalytics}
+                  isBusy={isBusy}
+                />
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <AccountPage
+                  passport={passport}
+                  savePassport={savePassport}
+                  setPassport={setPassport}
+                  signOut={signOut}
+                  updateUser={updateUser}
+                  user={user}
+                  renderAvatar={renderAvatar}
+                  isBusy={isBusy}
+                />
+              }
+            />
+            <Route
+              path="*"
+              element={<NotFoundPage isAuthenticated variant="shell" />}
+            />
+          </Routes>
+        </div>
       </main>
     </div>
   );
