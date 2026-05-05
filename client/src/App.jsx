@@ -1,454 +1,228 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Chart as ChartJS,
-  Filler,
-  Legend,
-  LineElement,
-  PointElement,
-  RadialLinearScale,
-  Tooltip,
-} from "chart.js";
-import { FiCamera } from "react-icons/fi";
-import { Radar } from "react-chartjs-2";
+  FiGrid, FiFileText, FiBriefcase, FiList, FiBarChart2,
+  FiUser, FiPieChart, FiTarget, FiMap,
+} from "react-icons/fi";
 
-ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
+import { apiRequest, getBackendOrigin, splitSkills, countryCodes } from "./utils";
+import OverviewPage      from "./pages/OverviewPage";
+import CvPage            from "./pages/CvPage";
+import JobsPage          from "./pages/JobsPage";
+import ApplicationsPage  from "./pages/ApplicationsPage";
+import InsightsPage      from "./pages/InsightsPage";
+import SkillGapPage      from "./pages/SkillGapPage";
+import RoadmapPage       from "./pages/RoadmapPage";
+import AnalyticsPage     from "./pages/AnalyticsPage";
+import AccountPage       from "./pages/AccountPage";
 
+// ─── Navigation ──────────────────────────────────────────────────────────────
 const pages = [
-  { id: "overview", label: "Overview" },
-  { id: "cv", label: "CV Studio" },
-  { id: "jobs", label: "Job Explorer" },
-  { id: "insights", label: "AI Insights" },
-  { id: "account", label: "My Account" },
+  { id: "overview",     label: "Dashboard",   icon: FiGrid,      section: "workspace" },
+  { id: "jobs",         label: "Jobs",         icon: FiBriefcase, section: "workspace" },
+  { id: "cv",           label: "My CVs",       icon: FiFileText,  section: "workspace" },
+  { id: "skillgap",     label: "Skill gaps",   icon: FiTarget,    section: "growth" },
+  { id: "roadmap",      label: "Roadmap",      icon: FiMap,       section: "growth" },
+  { id: "applications", label: "Applications", icon: FiList,      section: "apply" },
+  { id: "analytics",    label: "Trends",       icon: FiPieChart,  section: "apply" },
+  { id: "insights",     label: "AI Insights",  icon: FiBarChart2, section: "apply" },
+  { id: "account",      label: "Profile",      icon: FiUser,      section: "apply" },
 ];
 
-const defaultMatch = {
-  cvSkills: "Java, SQL",
-  jobSkills: "Java, Docker, SQL",
-};
+// ─── Constants ────────────────────────────────────────────────────────────────
+const defaultMatch   = { cvSkills: "Java, SQL", jobSkills: "Java, Docker, SQL" };
+const applicationStatuses = ["Saved for Later", "Under Review", "Accepted", "Rejected"];
 
 const emptyUser = {
-  firstName: "",
-  lastName: "",
-  email: "",
-  countryCode: "+90",
-  phoneNumber: "",
-  photo: "",
-  password: "",
+  firstName: "", lastName: "", email: "",
+  countryCode: "+90", phoneNumber: "", photo: "", password: "",
 };
-
-const countryCodes = [
-  { code: "+90", label: "TR +90" },
-  { code: "+1", label: "US +1" },
-  { code: "+44", label: "UK +44" },
-  { code: "+49", label: "DE +49" },
-  { code: "+33", label: "FR +33" },
-  { code: "+31", label: "NL +31" },
-  { code: "+39", label: "IT +39" },
-  { code: "+34", label: "ES +34" },
-];
 
 const emptyPassport = {
-  targetTitle: "",
-  school: "",
-  department: "",
-  graduationYear: "",
-  gpa: "",
-  location: "",
-  interests: "",
-  skills: "",
-  languages: "",
-  tools: "",
-  experience: "",
-  projects: "",
-  certificates: "",
-  achievements: "",
-  summary: "",
-  workStyle: "",
-  salaryExpectation: "",
-  availability: "",
-  portfolio: "",
-  linkedin: "",
-  github: "",
+  targetTitle: "", school: "", department: "", graduationYear: "", gpa: "",
+  location: "", interests: "", skills: "", languages: "", tools: "",
+  experience: "", projects: "", certificates: "", achievements: "", summary: "",
+  workStyle: "", salaryExpectation: "", availability: "",
+  portfolio: "", linkedin: "", github: "",
 };
 
-const careerFields = [
-  {
-    label: "Frontend",
-    description: "User interfaces, components, responsive web apps",
-    keywords: [
-      "frontend",
-      "front end",
-      "react",
-      "vue",
-      "angular",
-      "javascript",
-      "typescript",
-      "html",
-      "css",
-      "tailwind",
-      "responsive",
-      "component",
-      "ui",
-      "ux",
-      "figma",
-    ],
-  },
-  {
-    label: "Backend",
-    description: "APIs, databases, auth, server-side systems",
-    keywords: [
-      "backend",
-      "back end",
-      "node",
-      "express",
-      "java",
-      "spring",
-      "api",
-      "rest",
-      "graphql",
-      "mongodb",
-      "postgresql",
-      "mysql",
-      "sql",
-      "auth",
-      "jwt",
-    ],
-  },
-  {
-    label: "Data & AI",
-    description: "Data analysis, ML concepts, analytics workflows",
-    keywords: [
-      "data",
-      "ai",
-      "artificial intelligence",
-      "machine learning",
-      "python",
-      "pandas",
-      "numpy",
-      "analytics",
-      "statistics",
-      "visualization",
-      "model",
-      "prediction",
-    ],
-  },
-  {
-    label: "DevOps & Cloud",
-    description: "Deployment, containers, CI/CD, cloud operations",
-    keywords: [
-      "devops",
-      "docker",
-      "kubernetes",
-      "ci",
-      "cd",
-      "github actions",
-      "deployment",
-      "linux",
-      "nginx",
-      "aws",
-      "azure",
-      "gcp",
-      "cloud",
-    ],
-  },
-  {
-    label: "Mobile",
-    description: "Native and cross-platform mobile development",
-    keywords: [
-      "mobile",
-      "react native",
-      "flutter",
-      "swift",
-      "kotlin",
-      "android",
-      "ios",
-      "xcode",
-      "app store",
-      "play store",
-    ],
-  },
-  {
-    label: "QA & Automation",
-    description: "Testing strategy, automation, quality workflows",
-    keywords: [
-      "qa",
-      "quality",
-      "test",
-      "testing",
-      "automation",
-      "jest",
-      "cypress",
-      "playwright",
-      "selenium",
-      "unit test",
-      "integration test",
-      "postman",
-    ],
-  },
-];
-
-function splitSkills(value) {
-  return value
-    .split(",")
-    .map((skill) => skill.trim())
-    .filter(Boolean);
-}
-
-function normalizeCareerText(value = "") {
-  return value
-    .toString()
-    .toLocaleLowerCase("tr-TR")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/ı/g, "i");
-}
-
-function getPassportText(passport, fields) {
-  return normalizeCareerText(fields.map((field) => passport[field] || "").join(" "));
-}
-
-function scoreCareerField(field, passport) {
-  const weightedSources = [
-    { fields: ["skills", "tools"], weight: 11 },
-    { fields: ["projects", "experience", "certificates"], weight: 8 },
-    { fields: ["targetTitle", "summary", "achievements", "interests"], weight: 6 },
-    { fields: ["department", "workStyle", "languages"], weight: 3 },
-  ];
-
-  const evidence = [];
-  let score = 18;
-
-  weightedSources.forEach((source) => {
-    const text = getPassportText(passport, source.fields);
-
-    field.keywords.forEach((keyword) => {
-      const normalizedKeyword = normalizeCareerText(keyword);
-      if (text.includes(normalizedKeyword)) {
-        score += source.weight;
-        if (!evidence.includes(keyword)) evidence.push(keyword);
-      }
-    });
-  });
-
-  const hasPassportData = Object.values(passport).some((value) =>
-    value?.toString().trim()
-  );
-
-  return {
-    ...field,
-    evidence: evidence.slice(0, 6),
-    score: hasPassportData ? Math.min(96, score) : 0,
-  };
-}
-
-function buildCareerMatrix(passport) {
-  const fields = careerFields
-    .map((field) => scoreCareerField(field, passport))
-    .sort((a, b) => b.score - a.score);
-
-  const topField = fields[0];
-  const average = Math.round(
-    fields.reduce((total, field) => total + field.score, 0) / fields.length
-  );
-
-  return {
-    average,
-    fields,
-    topField,
-    chartFields: careerFields.map((field) =>
-      fields.find((scoredField) => scoredField.label === field.label)
-    ),
-  };
-}
-
-async function apiRequest(path, options = {}) {
-  const response = await fetch(path, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-    ...options,
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || data.message || "Request failed");
-  }
-
-  return data;
-}
-
-function getBackendOrigin() {
-  if (typeof window === "undefined") {
-    return "http://localhost:5001";
-  }
-
-  return `${window.location.protocol}//${window.location.hostname}:5001`;
-}
-
+// ─── App ─────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [activePage, setActivePage] = useState("overview");
-  const [status, setStatus] = useState("System ready");
-  const [authMode, setAuthMode] = useState("register");
-  const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem("careerUser");
-    return stored ? JSON.parse(stored) : null;
+  const [activePage,          setActivePage]          = useState("overview");
+  const [status,              setStatus]              = useState("System ready");
+  const [toast,               setToast]               = useState("");
+  const [authMode,            setAuthMode]            = useState("register");
+  const [user,                setUser]                = useState(() => {
+    const s = localStorage.getItem("careerUser");
+    return s ? JSON.parse(s) : null;
   });
-  const [authForm, setAuthForm] = useState(emptyUser);
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    return localStorage.getItem("careerPassportSkipped") !== "true";
+  const [authForm,            setAuthForm]            = useState(emptyUser);
+  const [showOnboarding,      setShowOnboarding]      = useState(() =>
+    localStorage.getItem("careerPassportSkipped") !== "true"
+  );
+  const [passport,            setPassport]            = useState(() => {
+    const s = localStorage.getItem("careerPassport");
+    return s ? JSON.parse(s) : emptyPassport;
   });
-  const [passport, setPassport] = useState(() => {
-    const stored = localStorage.getItem("careerPassport");
-    return stored ? JSON.parse(stored) : emptyPassport;
-  });
-  const [cvs, setCvs] = useState([]);
-  const [selectedCvId, setSelectedCvId] = useState("");
-  const [cvForm, setCvForm] = useState({
-    title: "Backend CV",
-    skills: "Java, SQL",
-  });
-  const [filterForm, setFilterForm] = useState({
-    keyword: "developer",
-    skill: "Java",
-    minMatch: "50",
-    sort: "score",
-  });
-  const [matchForm, setMatchForm] = useState(defaultMatch);
-  const [jobs, setJobs] = useState([]);
-  const [recommendations, setRecommendations] = useState([]);
-  const [matchResult, setMatchResult] = useState(null);
-  const [analysisResult, setAnalysisResult] = useState(null);
-  const [bestCvResult, setBestCvResult] = useState(null);
+  const [cvs,                 setCvs]                 = useState([]);
+  const [selectedCvId,        setSelectedCvId]        = useState("");
+  const [cvForm,              setCvForm]              = useState({ title: "Backend CV", skills: "Java, SQL" });
+  const [cvGeneratorForm,     setCvGeneratorForm]     = useState({ targetField: "Backend", jobId: "" });
+  const [generatedCv,         setGeneratedCv]         = useState(null);
+  const [filterForm,          setFilterForm]          = useState({ keyword: "developer", skill: "Java", minMatch: "50", sort: "score" });
+  const [matchForm,           setMatchForm]           = useState(defaultMatch);
+  const [jobs,                setJobs]                = useState([]);
+  const [recommendations,     setRecommendations]     = useState([]);
+  const [applications,        setApplications]        = useState([]);
+  const [selectedJobDetail,   setSelectedJobDetail]   = useState(null);
+  const [jobCvRankings,       setJobCvRankings]       = useState([]);
+  const [jobCvRankingStatus,  setJobCvRankingStatus]  = useState("");
+  const [matchResult,         setMatchResult]         = useState(null);
+  const [analysisResult,      setAnalysisResult]      = useState(null);
+  const [bestCvResult,        setBestCvResult]        = useState(null);
+  const [successScore,        setSuccessScore]        = useState(null);
+  const [cvSuggestions,       setCvSuggestions]       = useState(null);
+  const [skillFrequency,      setSkillFrequency]      = useState([]);
+  const [similarApplications, setSimilarApplications] = useState([]);
 
   const selectedCv = useMemo(
     () => cvs.find((cv) => cv._id === selectedCvId),
     [cvs, selectedCvId]
   );
+  const availableJobs = useMemo(() => {
+    const map = new Map();
+    [...jobs, ...recommendations].forEach((j) => { if (j?._id) map.set(j._id, j); });
+    return [...map.values()];
+  }, [jobs, recommendations]);
   const bestJobId = jobs[0]?._id || recommendations[0]?._id;
-  const topScore = recommendations[0]?.matchScore ?? jobs[0]?.matchScore ?? 0;
 
+  // ── Data loaders ────────────────────────────────────────────────────────────
   async function loadCvs() {
     const data = await apiRequest("/api/cvs");
-    const nextCvs = data.data || [];
-    setCvs(nextCvs);
+    const next = data.data || [];
+    setCvs(next);
+    if (!selectedCvId && next[0]?._id) setSelectedCvId(next[0]._id);
+  }
 
-    if (!selectedCvId && nextCvs[0]?._id) {
-      setSelectedCvId(nextCvs[0]._id);
-    }
+  async function loadApplications() {
+    if (!user?.email) return;
+    const data = await apiRequest(`/api/applications?userEmail=${encodeURIComponent(user.email)}`);
+    setApplications(data.data || []);
   }
 
   useEffect(() => {
     if (user) {
-      loadCvs().catch((error) => setStatus(error.message));
+      loadCvs().catch((e) => setStatus(e.message));
+      loadApplications().catch((e) => setStatus(e.message));
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!toast) return undefined;
+    const t = window.setTimeout(() => setToast(""), 2200);
+    return () => window.clearTimeout(t);
+  }, [toast]);
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+  async function runAction(label, action) {
+    try { setStatus(label); await action(); }
+    catch (e) { setStatus(e.message); }
+  }
+
+  function notify(message) { setStatus(message); setToast(message); }
+
+  function renderAvatar(sourceUser, className = "account-avatar") {
+    if (sourceUser?.photo) return <img alt="Profile" className={className} src={sourceUser.photo} />;
+    return <div className={className}>{(sourceUser?.firstName?.[0] || "U").toUpperCase()}</div>;
+  }
+
+  // ── Auth ────────────────────────────────────────────────────────────────────
   function submitAuth(event) {
     event.preventDefault();
-
     if (authMode === "login") {
-      const stored = localStorage.getItem("careerUser");
-      const savedUser = stored ? JSON.parse(stored) : null;
-
-      if (!savedUser || savedUser.email !== authForm.email) {
-        setStatus("No account found for this email");
-        return;
-      }
-
+      const saved = localStorage.getItem("careerUser");
+      const savedUser = saved ? JSON.parse(saved) : null;
+      if (!savedUser || savedUser.email !== authForm.email) { setStatus("No account found for this email"); return; }
       setUser(savedUser);
       setStatus("Signed in");
       setShowOnboarding(localStorage.getItem("careerPassportSkipped") !== "true");
       return;
     }
-
     const nextUser = {
-      firstName: authForm.firstName,
-      lastName: authForm.lastName,
-      email: authForm.email,
-      countryCode: authForm.countryCode,
+      firstName: authForm.firstName, lastName: authForm.lastName,
+      email: authForm.email, countryCode: authForm.countryCode,
       phoneNumber: authForm.phoneNumber,
-      phone: `${authForm.countryCode} ${authForm.phoneNumber}`,
-      photo: "",
+      phone: `${authForm.countryCode} ${authForm.phoneNumber}`, photo: "",
     };
-
     localStorage.setItem("careerUser", JSON.stringify(nextUser));
-    setUser(nextUser);
-    setStatus("Account created");
-    setShowOnboarding(true);
+    setUser(nextUser); setStatus("Account created"); setShowOnboarding(true);
   }
 
   function updateUser(nextUser) {
     localStorage.setItem("careerUser", JSON.stringify(nextUser));
-    setUser(nextUser);
-    setStatus("Account updated");
-  }
-
-  function renderAvatar(sourceUser, className = "account-avatar") {
-    if (sourceUser?.photo) {
-      return (
-        <img
-          alt={`${sourceUser.firstName || "User"} profile`}
-          className={className}
-          src={sourceUser.photo}
-        />
-      );
-    }
-
-    return (
-      <div className={className}>
-        {(sourceUser?.firstName?.[0] || "U").toUpperCase()}
-      </div>
-    );
+    setUser(nextUser); setStatus("Account updated");
   }
 
   function savePassport(nextPassport = passport) {
     localStorage.setItem("careerPassport", JSON.stringify(nextPassport));
     localStorage.setItem("careerPassportSkipped", "true");
-    setPassport(nextPassport);
-    setShowOnboarding(false);
-    setStatus("Career Passport saved");
+    setPassport(nextPassport); setShowOnboarding(false); setStatus("Career Passport saved");
   }
 
   function skipPassport() {
     localStorage.setItem("careerPassportSkipped", "true");
-    setShowOnboarding(false);
-    setStatus("You can complete Career Passport later");
+    setShowOnboarding(false); setStatus("You can complete Career Passport later");
   }
 
-  function signOut() {
-    setUser(null);
-    setActivePage("overview");
-    setStatus("Signed out");
-  }
+  function signOut() { setUser(null); setActivePage("overview"); setStatus("Signed out"); }
 
-  async function runAction(label, action) {
-    try {
-      setStatus(label);
-      await action();
-    } catch (error) {
-      setStatus(error.message);
-    }
-  }
-
+  // ── CV actions ──────────────────────────────────────────────────────────────
   function createCv(event) {
     event.preventDefault();
     runAction("Creating CV profile", async () => {
       const data = await apiRequest("/api/cvs", {
         method: "POST",
-        body: JSON.stringify({
-          title: cvForm.title,
-          skills: splitSkills(cvForm.skills),
-        }),
+        body: JSON.stringify({ title: cvForm.title, skills: splitSkills(cvForm.skills) }),
       });
-
-      setSelectedCvId(data.data._id);
-      await loadCvs();
-      setStatus("CV profile created");
+      setSelectedCvId(data.data._id); await loadCvs(); setStatus("CV profile created");
     });
   }
 
+  function generateTailoredCv(event) {
+    event.preventDefault();
+    runAction("Generating tailored CV draft", async () => {
+      const data = await apiRequest("/api/cvs/generate", {
+        method: "POST",
+        body: JSON.stringify({ passport, targetField: cvGeneratorForm.targetField, jobId: cvGeneratorForm.jobId || undefined }),
+      });
+      setGeneratedCv(data.data); setStatus(data.data?.message || "Tailored CV draft ready");
+    });
+  }
+
+  async function generateCvDraft({ targetField = "Auto", jobId } = {}) {
+    const data = await apiRequest("/api/cvs/generate", {
+      method: "POST",
+      body: JSON.stringify({ passport, targetField, jobId }),
+    });
+    setGeneratedCv(data.data); setStatus(data.data?.message || "Tailored CV draft ready");
+    setActivePage("cv");
+  }
+
+  function generateCvForJob(job) {
+    if (!job?._id) return;
+    runAction("Generating job-specific CV draft", async () => { await generateCvDraft({ targetField: "Auto", jobId: job._id }); });
+  }
+
+  function updateGeneratedCv(field, value) { setGeneratedCv((c) => ({ ...c, [field]: value })); }
+
+  function saveGeneratedCv() {
+    if (!generatedCv) return;
+    runAction("Saving tailored CV", async () => {
+      const data = await apiRequest("/api/cvs", { method: "POST", body: JSON.stringify(generatedCv) });
+      setSelectedCvId(data.data._id); setGeneratedCv(null); await loadCvs(); setStatus("Tailored CV saved");
+    });
+  }
+
+  // ── Job actions ──────────────────────────────────────────────────────────────
   function fetchJobs() {
     runAction("Fetching jobs from Adzuna", async () => {
       const data = await apiRequest("/api/jobs/fetch");
@@ -460,40 +234,66 @@ export default function App() {
     event?.preventDefault();
     runAction("Filtering jobs from database", async () => {
       const params = new URLSearchParams();
-      Object.entries(filterForm).forEach(([key, value]) => {
-        if (value) params.set(key, value);
-      });
+      Object.entries(filterForm).forEach(([k, v]) => { if (v) params.set(k, v); });
       if (selectedCvId) params.set("cvId", selectedCvId);
-
       const data = await apiRequest(`/api/jobs/filter?${params.toString()}`);
-      setJobs(data.data || []);
-      setStatus(`${data.data?.length || 0} jobs loaded`);
+      setJobs(data.data || []); setStatus(`${data.data?.length || 0} jobs loaded`);
     });
   }
 
   function loadRecommendations() {
-    if (!selectedCvId) {
-      setStatus("Create or select a CV first");
-      return;
-    }
-
+    if (!selectedCvId) { setStatus("Create or select a CV first"); return; }
     runAction("Ranking recommendations", async () => {
       const data = await apiRequest(`/api/recommendations?cvId=${selectedCvId}`);
-      setRecommendations(data.recommendations || []);
-      setStatus("Recommendations ranked");
+      setRecommendations(data.recommendations || []); setStatus("Recommendations ranked");
     });
   }
 
-  function findBestCv() {
-    if (!bestJobId) {
-      setStatus("Load jobs or recommendations first");
-      return;
-    }
+  function openJobDetail(job) {
+    setSelectedJobDetail(job); setJobCvRankings([]); setJobCvRankingStatus("Ranking saved CVs");
+    runAction("Ranking saved CVs for this job", async () => {
+      const data = await apiRequest("/api/cvs/rank-for-job", { method: "POST", body: JSON.stringify({ jobId: job._id }) });
+      setJobCvRankings(data.data?.rankings || []);
+      setJobCvRankingStatus(data.data?.source === "ai" ? "AI-assisted CV ranking" : "Rule-based CV ranking");
+      setStatus("CV ranking ready");
+    });
+  }
 
+  // ── Application actions ──────────────────────────────────────────────────────
+  function trackApplication(job, nextStatus = "Under Review") {
+    if (!selectedCvId) { setStatus("Create or select a CV first"); return; }
+    if (!job?._id)     { setStatus("Select a saved job first"); return; }
+    runAction(nextStatus === "Saved for Later" ? "Saving job for later" : "Adding application", async () => {
+      const data = await apiRequest("/api/applications", {
+        method: "POST",
+        body: JSON.stringify({ userEmail: user.email, jobId: job._id, cvId: selectedCvId, status: nextStatus }),
+      });
+      await loadApplications();
+      notify(nextStatus === "Saved for Later" ? "Job saved for later" : data.message || "Application added");
+    });
+  }
+
+  function updateApplicationStatus(applicationId, status) {
+    runAction("Updating application status", async () => {
+      await apiRequest(`/api/applications/${applicationId}/status`, { method: "PATCH", body: JSON.stringify({ status }) });
+      await loadApplications(); notify("Application status updated");
+    });
+  }
+
+  function loadSimilarApplications() {
+    if (!user?.email) return;
+    runAction("Loading similar role recommendations", async () => {
+      const data = await apiRequest(`/api/similar-applications?userEmail=${encodeURIComponent(user.email)}`);
+      setSimilarApplications(data.data || []); setStatus("Similar roles loaded");
+    });
+  }
+
+  // ── Insights actions ─────────────────────────────────────────────────────────
+  function findBestCv() {
+    if (!bestJobId) { setStatus("Load jobs or recommendations first"); return; }
     runAction("Finding best CV for selected job", async () => {
       const data = await apiRequest(`/api/best-cv/${bestJobId}`);
-      setBestCvResult(data);
-      setStatus("Best CV calculated");
+      setBestCvResult(data); setStatus("Best CV calculated");
     });
   }
 
@@ -502,14 +302,9 @@ export default function App() {
     runAction("Calculating match explainability", async () => {
       const data = await apiRequest("/api/match", {
         method: "POST",
-        body: JSON.stringify({
-          cvSkills: splitSkills(matchForm.cvSkills),
-          jobSkills: splitSkills(matchForm.jobSkills),
-        }),
+        body: JSON.stringify({ cvSkills: splitSkills(matchForm.cvSkills), jobSkills: splitSkills(matchForm.jobSkills) }),
       });
-
-      setMatchResult(data);
-      setStatus("Match explanation ready");
+      setMatchResult(data); setStatus("Match explanation ready");
     });
   }
 
@@ -517,1243 +312,294 @@ export default function App() {
     runAction("Building learning roadmap", async () => {
       const data = await apiRequest("/api/analysis", {
         method: "POST",
-        body: JSON.stringify({
-          missingSkills: matchResult?.missingSkills || [],
-        }),
+        body: JSON.stringify({ missingSkills: matchResult?.missingSkills || [] }),
       });
-
-      setAnalysisResult(data);
-      setStatus("Roadmap ready");
+      setAnalysisResult(data); setStatus("Roadmap ready");
     });
   }
 
+  function getSuccessScore() {
+    if (!selectedCvId || !bestJobId) { setStatus("Load jobs and select a CV first"); return; }
+    runAction("Calculating application success score", async () => {
+      const data = await apiRequest("/api/success-score", { method: "POST", body: JSON.stringify({ cvId: selectedCvId, jobId: bestJobId }) });
+      setSuccessScore(data); setStatus("Success score ready");
+    });
+  }
+
+  function generateCvSuggestions() {
+    if (!selectedCvId) { setStatus("Select a CV first"); return; }
+    runAction("Generating CV improvement suggestions", async () => {
+      const data = await apiRequest("/api/cv-suggestions", { method: "POST", body: JSON.stringify({ cvId: selectedCvId }) });
+      setCvSuggestions(data); setStatus("CV suggestions ready");
+    });
+  }
+
+  function loadSkillFrequency() {
+    runAction("Analyzing missing skill frequency", async () => {
+      const data = await apiRequest("/api/skill-frequency");
+      setSkillFrequency(data.data || []); setStatus("Skill frequency analysis ready");
+    });
+  }
+
+  // ── Route guards ─────────────────────────────────────────────────────────────
   if (!user) {
     return (
-      <AuthPage
-        authForm={authForm}
-        authMode={authMode}
-        setAuthForm={setAuthForm}
-        setAuthMode={setAuthMode}
-        submitAuth={submitAuth}
-        status={status}
-      />
+      <AuthPage authForm={authForm} authMode={authMode} setAuthForm={setAuthForm}
+        setAuthMode={setAuthMode} submitAuth={submitAuth} status={status} />
     );
   }
 
   if (showOnboarding) {
     return (
-      <PassportOnboarding
-        passport={passport}
-        setPassport={setPassport}
-        savePassport={savePassport}
-        skipPassport={skipPassport}
-        user={user}
-      />
+      <PassportOnboarding passport={passport} setPassport={setPassport}
+        savePassport={savePassport} skipPassport={skipPassport} user={user} />
     );
   }
 
+  // ── Shell ────────────────────────────────────────────────────────────────────
   return (
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <span>AC</span>
-          <div>
-            <strong>AI Career OS</strong>
-            <small>Matching workspace</small>
-          </div>
+          <span className="brand-mark">◆</span>
+          <span className="brand-name">Career Match</span>
         </div>
 
-        <nav className="nav">
-          {pages.map((page) => (
-            <button
-              className={activePage === page.id ? "active" : ""}
-              key={page.id}
-              onClick={() => setActivePage(page.id)}
-              type="button"
-            >
-              {page.label}
-            </button>
-          ))}
-        </nav>
+        <div className="nav-section">Workspace</div>
+        {pages.filter((p) => p.section === "workspace").map((page) => (
+          <button key={page.id} className="nav-item" data-active={activePage === page.id}
+            type="button" onClick={() => setActivePage(page.id)}>
+            <page.icon className="ico" size={15} />
+            {page.label}
+          </button>
+        ))}
 
-        <a
-          className="doc-link"
-          href={`${getBackendOrigin()}/api-docs`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Open Swagger
-        </a>
+        <div className="nav-section">Growth</div>
+        {pages.filter((p) => p.section === "growth").map((page) => (
+          <button key={page.id} className="nav-item" data-active={activePage === page.id}
+            type="button" onClick={() => setActivePage(page.id)}>
+            <page.icon className="ico" size={15} />
+            {page.label}
+          </button>
+        ))}
+
+        <div className="nav-section">Applications</div>
+        {pages.filter((p) => p.section === "apply").map((page) => (
+          <button key={page.id} className="nav-item" data-active={activePage === page.id}
+            type="button" onClick={() => setActivePage(page.id)}>
+            <page.icon className="ico" size={15} />
+            {page.label}
+          </button>
+        ))}
+
+        <div className="sidebar-foot">
+          <a className="doc-link" href={`${getBackendOrigin()}/api-docs`} target="_blank" rel="noreferrer">
+            API Docs ↗
+          </a>
+          <div className="profile-chip" role="button" tabIndex={0}
+            style={{ marginTop: 8 }} onClick={() => setActivePage("account")}>
+            <div className="avatar-chip">
+              {user.photo
+                ? <img src={user.photo} alt="Profile" />
+                : (user.firstName?.[0] || "U").toUpperCase()
+              }
+            </div>
+            <div className="meta">
+              <span className="name">{user.firstName} {user.lastName}</span>
+              <span className="role">{passport.targetTitle || "Career seeker"}</span>
+            </div>
+          </div>
+        </div>
       </aside>
 
       <main className="workspace">
+        {toast && <div className="toast-notification" role="status">{toast}</div>}
+
         <header className="workspace-header">
           <div>
-            <p className="eyebrow">Live backend demo</p>
-            <h1>{pages.find((page) => page.id === activePage)?.label}</h1>
+            <p className="eyebrow">AI Career OS — Live demo</p>
+            <h1>{pages.find((p) => p.id === activePage)?.label}</h1>
           </div>
           <div className="header-actions">
-            <div className="pulse">
-              <span />
-              {status}
-            </div>
-            <button
-              type="button"
-              className="account-button"
-              onClick={() => setActivePage("account")}
-            >
-              {user.photo ? (
-                <img alt="Profile" src={user.photo} />
-              ) : (
-                user.firstName?.[0] || "U"
-              )}
+            <div className="pulse"><span />{status}</div>
+            <button type="button" className="account-button" onClick={() => setActivePage("account")}>
+              {user.photo ? <img alt="Profile" src={user.photo} /> : (user.firstName?.[0] || "U").toUpperCase()}
             </button>
           </div>
         </header>
 
         {activePage === "overview" && (
-          <OverviewPage
-            cvs={cvs}
-            jobs={jobs}
-            recommendations={recommendations}
-            selectedCv={selectedCv}
-            topScore={topScore}
-            setActivePage={setActivePage}
-            fetchJobs={fetchJobs}
-            loadRecommendations={loadRecommendations}
-          />
+          <OverviewPage applications={applications} cvs={cvs} jobs={jobs}
+            recommendations={recommendations} selectedCv={selectedCv}
+            setActivePage={setActivePage} fetchJobs={fetchJobs}
+            loadRecommendations={loadRecommendations} />
         )}
-
         {activePage === "cv" && (
-          <CvPage
-            cvs={cvs}
-            cvForm={cvForm}
-            selectedCvId={selectedCvId}
-            setCvForm={setCvForm}
-            setSelectedCvId={setSelectedCvId}
-            createCv={createCv}
-          />
+          <CvPage availableJobs={availableJobs} cvs={cvs} cvForm={cvForm}
+            cvGeneratorForm={cvGeneratorForm} generatedCv={generatedCv}
+            selectedCvId={selectedCvId} setCvForm={setCvForm}
+            setCvGeneratorForm={setCvGeneratorForm} setSelectedCvId={setSelectedCvId}
+            createCv={createCv} generateTailoredCv={generateTailoredCv}
+            saveGeneratedCv={saveGeneratedCv} updateGeneratedCv={updateGeneratedCv}
+            cvSuggestions={cvSuggestions} generateCvSuggestions={generateCvSuggestions} />
         )}
-
         {activePage === "jobs" && (
-          <JobsPage
-            filterForm={filterForm}
-            setFilterForm={setFilterForm}
-            selectedCv={selectedCv}
-            jobs={jobs}
-            fetchJobs={fetchJobs}
-            filterJobs={filterJobs}
-            loadRecommendations={loadRecommendations}
-          />
+          <JobsPage filterForm={filterForm} setFilterForm={setFilterForm}
+            selectedCv={selectedCv} jobs={jobs} fetchJobs={fetchJobs}
+            filterJobs={filterJobs} generateCvForJob={generateCvForJob}
+            jobCvRankings={jobCvRankings} jobCvRankingStatus={jobCvRankingStatus}
+            loadRecommendations={loadRecommendations} openJobDetail={openJobDetail}
+            selectedJobDetail={selectedJobDetail} setSelectedJobDetail={setSelectedJobDetail}
+            trackApplication={trackApplication} />
         )}
-
+        {activePage === "skillgap" && (
+          <SkillGapPage jobs={jobs} recommendations={recommendations}
+            selectedCv={selectedCv} setActivePage={setActivePage} />
+        )}
+        {activePage === "roadmap" && (
+          <RoadmapPage jobs={jobs} recommendations={recommendations}
+            selectedCv={selectedCv} analyzeGaps={analyzeGaps}
+            analysisResult={analysisResult} matchResult={matchResult} />
+        )}
+        {activePage === "applications" && (
+          <ApplicationsPage applications={applications}
+            applicationStatuses={applicationStatuses} setActivePage={setActivePage}
+            updateApplicationStatus={updateApplicationStatus}
+            similarApplications={similarApplications}
+            loadSimilarApplications={loadSimilarApplications} />
+        )}
+        {activePage === "analytics" && (
+          <AnalyticsPage applications={applications} jobs={jobs}
+            recommendations={recommendations} skillFrequency={skillFrequency}
+            loadSkillFrequency={loadSkillFrequency} />
+        )}
         {activePage === "insights" && (
-          <InsightsPage
-            matchForm={matchForm}
-            setMatchForm={setMatchForm}
-            runMatch={runMatch}
-            analyzeGaps={analyzeGaps}
-            findBestCv={findBestCv}
-            matchResult={matchResult}
-            analysisResult={analysisResult}
-            bestCvResult={bestCvResult}
-            recommendations={recommendations}
-          />
+          <InsightsPage matchForm={matchForm} setMatchForm={setMatchForm}
+            runMatch={runMatch} analyzeGaps={analyzeGaps} findBestCv={findBestCv}
+            matchResult={matchResult} analysisResult={analysisResult}
+            bestCvResult={bestCvResult} recommendations={recommendations}
+            successScore={successScore} getSuccessScore={getSuccessScore} />
         )}
-
         {activePage === "account" && (
-          <AccountPage
-            passport={passport}
-            savePassport={savePassport}
-            setPassport={setPassport}
-            signOut={signOut}
-            updateUser={updateUser}
-            user={user}
-            renderAvatar={renderAvatar}
-          />
+          <AccountPage passport={passport} savePassport={savePassport}
+            setPassport={setPassport} signOut={signOut} updateUser={updateUser}
+            user={user} renderAvatar={renderAvatar} />
         )}
       </main>
     </div>
   );
 }
 
-function AuthPage({
-  authForm,
-  authMode,
-  setAuthForm,
-  setAuthMode,
-  submitAuth,
-  status,
-}) {
+// ─── Auth & Onboarding (kept here as they're flow screens, not pages) ─────────
+function AuthPage({ authForm, authMode, setAuthForm, setAuthMode, submitAuth, status }) {
   const isRegister = authMode === "register";
-
   return (
     <main className="auth-shell">
       <section className="auth-hero">
         <p className="eyebrow">AI Career OS</p>
         <h1>Build a smarter career profile before you search.</h1>
-        <p>
-          Create your Career Passport once, then match it with live job data,
-          recommendations, and skill roadmaps.
-        </p>
+        <p>Create your Career Passport once, then match it with live job data, recommendations, and skill roadmaps.</p>
       </section>
-
       <section className="auth-card">
         <div className="auth-tabs">
-          <button
-            className={isRegister ? "active" : ""}
-            type="button"
-            onClick={() => setAuthMode("register")}
-          >
-            Sign Up
-          </button>
-          <button
-            className={!isRegister ? "active" : ""}
-            type="button"
-            onClick={() => setAuthMode("login")}
-          >
-            Sign In
-          </button>
+          <button className={`auth-tab-btn${isRegister ? " active" : ""}`} type="button" onClick={() => setAuthMode("register")}>Sign Up</button>
+          <button className={`auth-tab-btn${!isRegister ? " active" : ""}`} type="button" onClick={() => setAuthMode("login")}>Sign In</button>
         </div>
-
         <form className="form-stack" onSubmit={submitAuth}>
           {isRegister && (
             <div className="two-fields">
-              <label>
-                First name
-                <input
-                  required
-                  value={authForm.firstName}
-                  onChange={(event) =>
-                    setAuthForm({ ...authForm, firstName: event.target.value })
-                  }
-                />
-              </label>
-              <label>
-                Last name
-                <input
-                  required
-                  value={authForm.lastName}
-                  onChange={(event) =>
-                    setAuthForm({ ...authForm, lastName: event.target.value })
-                  }
-                />
-              </label>
+              <label>First name<input required value={authForm.firstName} onChange={(e) => setAuthForm({ ...authForm, firstName: e.target.value })} /></label>
+              <label>Last name<input required value={authForm.lastName} onChange={(e) => setAuthForm({ ...authForm, lastName: e.target.value })} /></label>
             </div>
           )}
-
-          <label>
-            Email
-            <input
-              required
-              type="email"
-              value={authForm.email}
-              onChange={(event) =>
-                setAuthForm({ ...authForm, email: event.target.value })
-              }
-            />
-          </label>
-
+          <label>Email<input required type="email" value={authForm.email} onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })} /></label>
           {isRegister && (
-            <PhoneField
-              countryCode={authForm.countryCode}
-              phoneNumber={authForm.phoneNumber}
-              setCountryCode={(countryCode) =>
-                setAuthForm({ ...authForm, countryCode })
-              }
-              setPhoneNumber={(phoneNumber) =>
-                setAuthForm({ ...authForm, phoneNumber })
-              }
-            />
+            <label>
+              Phone
+              <div className="phone-field">
+                <select value={authForm.countryCode} onChange={(e) => setAuthForm({ ...authForm, countryCode: e.target.value })}>
+                  {countryCodes.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
+                </select>
+                <input required inputMode="tel" placeholder="5xx xxx xx xx" value={authForm.phoneNumber} onChange={(e) => setAuthForm({ ...authForm, phoneNumber: e.target.value })} />
+              </div>
+            </label>
           )}
-
-          <label>
-            Password
-            <input
-              required
-              type="password"
-              value={authForm.password}
-              onChange={(event) =>
-                setAuthForm({ ...authForm, password: event.target.value })
-              }
-            />
-          </label>
-
+          <label>Password<input required type="password" value={authForm.password} onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })} /></label>
           <button type="submit">{isRegister ? "Create Account" : "Sign In"}</button>
         </form>
-
         <p className="auth-status">{status}</p>
       </section>
     </main>
   );
 }
 
-function PassportOnboarding({
-  passport,
-  setPassport,
-  savePassport,
-  skipPassport,
-  user,
-}) {
-  function submit(event) {
-    event.preventDefault();
-    savePassport(passport);
-  }
-
+function PassportOnboarding({ passport, setPassport, savePassport, skipPassport, user }) {
+  function submit(event) { event.preventDefault(); savePassport(passport); }
   return (
     <main className="onboarding">
       <header className="onboarding-head">
         <div>
           <p className="eyebrow">Career Passport</p>
           <h1>Welcome, {user.firstName}. Let's build your professional profile.</h1>
-          <p>
-            Add your education, skills, experience, goals, and portfolio details.
-            You can edit everything later from My Account.
-          </p>
+          <p>Add your education, skills, experience, goals, and portfolio details. You can edit everything later from My Account.</p>
         </div>
-        <button className="ghost" type="button" onClick={skipPassport}>
-          Skip now
-        </button>
+        <button className="ghost" type="button" onClick={skipPassport}>Skip now</button>
       </header>
-
-      <PassportForm
-        passport={passport}
-        setPassport={setPassport}
-        submit={submit}
-        submitLabel="Save Career Passport"
-      />
+      <PassportFormInline passport={passport} setPassport={setPassport} submit={submit} submitLabel="Save Career Passport" />
     </main>
   );
 }
 
-function AccountPage({
-  passport,
-  renderAvatar,
-  savePassport,
-  setPassport,
-  signOut,
-  updateUser,
-  user,
-}) {
-  const [accountForm, setAccountForm] = useState(user);
-  const [isPassportModalOpen, setIsPassportModalOpen] = useState(false);
-  // This local matrix is the no-AI baseline. If the backend cannot call OpenAI
-  // or the /api/career-matrix request fails, the chart still renders from this
-  // deterministic Career Passport keyword scoring.
-  const fallbackCareerMatrix = useMemo(() => buildCareerMatrix(passport), [passport]);
-  const [aiCareerMatrix, setAiCareerMatrix] = useState(null);
-  const [careerMatrixStatus, setCareerMatrixStatus] = useState("Analyzing passport");
-  const careerMatrix = aiCareerMatrix || fallbackCareerMatrix;
-
-  useEffect(() => {
-    let isActive = true;
-
-    async function loadCareerMatrix() {
-      setCareerMatrixStatus("Analyzing passport");
-
-      try {
-        // Account page uses the backend AI-assisted analyzer first. The backend
-        // may return an OpenAI result or a rule-based fallback with the same
-        // shape, so the chart rendering code stays simple and stable.
-        const data = await apiRequest("/api/career-matrix", {
-          method: "POST",
-          body: JSON.stringify({ passport }),
-        });
-
-        if (!isActive) return;
-        setAiCareerMatrix(data.data);
-        setCareerMatrixStatus(
-          data.data?.source === "ai" ? "AI-assisted analysis" : "Rule-based fallback"
-        );
-      } catch (error) {
-        if (!isActive) return;
-        // If the request itself fails, keep the local rule-based matrix from
-        // buildCareerMatrix(passport) so the user still sees a useful graph.
-        setAiCareerMatrix(null);
-        setCareerMatrixStatus("Local analysis fallback");
-      }
-    }
-
-    loadCareerMatrix();
-
-    return () => {
-      isActive = false;
-    };
-  }, [passport]);
-
-  function submitAccount(event) {
-    event.preventDefault();
-    updateUser(accountForm);
-  }
-
-  function handlePhotoChange(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setAccountForm({ ...accountForm, photo: reader.result });
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function submitPassport(event) {
-    event.preventDefault();
-    savePassport(passport);
-    setIsPassportModalOpen(false);
-  }
-
-  return (
-    <div className="account-page">
-      <section className="account-hero">
-        <label className="avatar-editor">
-          {renderAvatar(accountForm)}
-          <input
-            accept="image/*"
-            aria-label="Change profile photo"
-            type="file"
-            onChange={handlePhotoChange}
-          />
-          <span aria-hidden="true">
-            <FiCamera />
-          </span>
-        </label>
-        <div>
-          <p className="eyebrow">My Account</p>
-          <h2>
-            {user.firstName} {user.lastName}
-          </h2>
-          <p>{user.email}</p>
-        </div>
-        <button className="ghost" type="button" onClick={signOut}>
-          Sign out
-        </button>
-      </section>
-
-      <section className="account-grid">
-        <article className="account-card">
-          <span>Phone</span>
-          <strong>{user.phone || "Not added"}</strong>
-        </article>
-        <article className="account-card">
-          <span>Target role</span>
-          <strong>{passport.targetTitle || "Not added"}</strong>
-        </article>
-        <article className="account-card">
-          <span>Primary skills</span>
-          <strong>{passport.skills || "Not added"}</strong>
-        </article>
-      </section>
-
-      <CareerMatrixPanel
-        careerMatrix={careerMatrix}
-        status={careerMatrixStatus}
-      />
-
-      <section className="panel account-panel">
-        <div className="section-head">
-          <div>
-            <h2>Personal details</h2>
-            <p className="muted">Keep your contact information current.</p>
-          </div>
-        </div>
-
-        <form className="account-form" onSubmit={submitAccount}>
-          <div className="two-fields">
-            <label>
-              First name
-              <input
-                value={accountForm.firstName || ""}
-                onChange={(event) =>
-                  setAccountForm({ ...accountForm, firstName: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              Last name
-              <input
-                value={accountForm.lastName || ""}
-                onChange={(event) =>
-                  setAccountForm({ ...accountForm, lastName: event.target.value })
-                }
-              />
-            </label>
-          </div>
-          <label>
-            Email
-            <input
-              type="email"
-              value={accountForm.email || ""}
-              onChange={(event) =>
-                setAccountForm({ ...accountForm, email: event.target.value })
-              }
-            />
-          </label>
-          <PhoneField
-            countryCode={accountForm.countryCode || "+90"}
-            phoneNumber={accountForm.phoneNumber || ""}
-            setCountryCode={(countryCode) =>
-              setAccountForm({
-                ...accountForm,
-                countryCode,
-                phone: `${countryCode} ${accountForm.phoneNumber || ""}`,
-              })
-            }
-            setPhoneNumber={(phoneNumber) =>
-              setAccountForm({
-                ...accountForm,
-                phoneNumber,
-                phone: `${accountForm.countryCode || "+90"} ${phoneNumber}`,
-              })
-            }
-          />
-          <button type="submit">Update Account</button>
-        </form>
-      </section>
-
-      <section className="panel account-panel">
-        <div className="section-head">
-          <div>
-            <p className="eyebrow">Career Passport</p>
-            <h2>Professional profile</h2>
-            <p className="muted">
-              Open the editor when you want to update your career data.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsPassportModalOpen(true)}
-          >
-            Edit Professional Profile
-          </button>
-        </div>
-
-        <div className="passport-preview">
-          <article>
-            <span>Target role</span>
-            <strong>{passport.targetTitle || "Not added"}</strong>
-          </article>
-          <article>
-            <span>Education</span>
-            <strong>{passport.school || "Not added"}</strong>
-          </article>
-          <article>
-            <span>Skills</span>
-            <strong>{passport.skills || "Not added"}</strong>
-          </article>
-          <article>
-            <span>Portfolio</span>
-            <strong>{passport.portfolio || "Not added"}</strong>
-          </article>
-        </div>
-      </section>
-
-      {isPassportModalOpen && (
-        <div className="modal-backdrop" role="presentation">
-          <section
-            aria-modal="true"
-            className="modal-window"
-            role="dialog"
-          >
-            <div className="modal-head">
-              <div>
-                <p className="eyebrow">Career Passport</p>
-                <h2>Edit professional profile</h2>
-              </div>
-              <button
-                className="ghost"
-                type="button"
-                onClick={() => setIsPassportModalOpen(false)}
-              >
-                Close
-              </button>
-            </div>
-            <PassportForm
-              passport={passport}
-              setPassport={setPassport}
-              submit={submitPassport}
-              submitLabel="Update Career Passport"
-            />
-          </section>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CareerMatrixPanel({ careerMatrix, status }) {
-  const hasMatrixData = careerMatrix.average > 0;
-  const chartData = {
-    labels: careerMatrix.chartFields.map((field) => field.label),
-    datasets: [
-      {
-        label: "Career fit",
-        data: careerMatrix.chartFields.map((field) => field.score),
-        backgroundColor: "rgba(20, 184, 166, 0.22)",
-        borderColor: "#14b8a6",
-        borderWidth: 2,
-        pointBackgroundColor: "#0f766e",
-        pointBorderColor: "#ecfeff",
-        pointHoverBackgroundColor: "#ecfeff",
-        pointHoverBorderColor: "#0f766e",
-        pointRadius: 4,
-      },
-    ],
-  };
-
-  const chartOptions = {
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: (context) => `${context.label}: ${context.formattedValue}/100`,
-        },
-      },
-    },
-    scales: {
-      r: {
-        angleLines: { color: "rgba(20, 184, 166, 0.18)" },
-        grid: { color: "rgba(148, 163, 184, 0.24)" },
-        pointLabels: {
-          color: "#dffcf6",
-          font: { size: 12, weight: "700" },
-        },
-        suggestedMin: 0,
-        suggestedMax: 100,
-        ticks: {
-          backdropColor: "transparent",
-          color: "rgba(226, 232, 240, 0.7)",
-          showLabelBackdrop: false,
-          stepSize: 20,
-        },
-      },
-    },
-  };
-
-  return (
-    <section className="grid items-center gap-[18px] overflow-hidden rounded-xl border border-teal-300/30 bg-[radial-gradient(circle_at_48%_48%,rgba(20,184,166,0.14),transparent_34%),linear-gradient(135deg,#0f172a_0%,#102a35_48%,#0f172a_100%)] p-[22px] text-white lg:grid-cols-[minmax(220px,0.72fr)_minmax(320px,1fr)_minmax(260px,0.82fr)]">
-      <div className="grid gap-3.5">
-        <p className="mb-2 text-xs font-black uppercase tracking-normal text-teal-300">
-          AI-Assisted Career Fit Matrix
-        </p>
-        <h2 className="text-[clamp(28px,4vw,48px)] font-bold leading-none">
-          {hasMatrixData ? careerMatrix.topField?.label : "Career direction"}
-        </h2>
-        <p className="text-slate-300 leading-relaxed">
-          Your Career Passport is analyzed with AI first, then backed by a
-          deterministic fallback so the chart stays reliable.
-        </p>
-        <span className="w-max rounded-full border border-teal-200/25 bg-teal-300/10 px-3 py-1 text-xs font-extrabold text-teal-100">
-          {status}
-        </span>
-        <div className="grid grid-cols-2 gap-2.5">
-          <article className="grid gap-1.5 rounded-[10px] border border-teal-200/25 bg-slate-950/55 p-3">
-            <span className="text-xs font-black uppercase text-teal-200">
-              Primary field
-            </span>
-            <strong className="text-xl">
-              {hasMatrixData ? careerMatrix.topField?.label : "Not enough data"}
-            </strong>
-          </article>
-          <article className="grid gap-1.5 rounded-[10px] border border-teal-200/25 bg-slate-950/55 p-3">
-            <span className="text-xs font-black uppercase text-teal-200">
-              Overall readiness
-            </span>
-            <strong className="text-xl">{careerMatrix.average}%</strong>
-          </article>
-        </div>
-      </div>
-
-      <div className="min-h-80 w-full lg:min-h-[360px]">
-        <Radar data={chartData} options={chartOptions} />
-      </div>
-
-      <div className="grid gap-2.5">
-        {careerMatrix.fields.slice(0, 4).map((field) => (
-          <article
-            className="grid gap-2 rounded-[10px] border border-slate-400/30 bg-slate-950/60 p-3"
-            key={field.label}
-          >
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="text-xs font-black uppercase text-teal-200">
-                {field.label}
-              </span>
-              <strong className="text-[28px] font-bold leading-none text-teal-300">
-                {field.score}
-              </strong>
-            </div>
-            <p className="text-[13px] leading-normal text-blue-100">
-              {field.description}
-            </p>
-            <small className="text-xs leading-normal text-slate-400">
-              {field.evidence.length
-                ? field.evidence.join(", ")
-                : "Waiting for Career Passport data"}
-            </small>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function PhoneField({ countryCode, phoneNumber, setCountryCode, setPhoneNumber }) {
-  return (
-    <label>
-      Phone
-      <div className="phone-field">
-        <select
-          value={countryCode}
-          onChange={(event) => setCountryCode(event.target.value)}
-        >
-          {countryCodes.map((country) => (
-            <option key={country.code} value={country.code}>
-              {country.label}
-            </option>
-          ))}
-        </select>
-        <input
-          required
-          inputMode="tel"
-          placeholder="5xx xxx xx xx"
-          value={phoneNumber}
-          onChange={(event) => setPhoneNumber(event.target.value)}
-        />
-      </div>
-    </label>
-  );
-}
-
-function PassportForm({ passport, setPassport, submit, submitLabel }) {
-  function update(field, value) {
-    setPassport({ ...passport, [field]: value });
-  }
-
-  return (
-    <form className="passport-form" onSubmit={submit}>
-      <PassportSection
-        title="Career Direction"
-        description="What kind of role are you aiming for?"
-      >
-        <Field
-          label="Target role"
-          value={passport.targetTitle}
-          onChange={(value) => update("targetTitle", value)}
-        />
-        <Field
-          label="Location"
-          value={passport.location}
-          onChange={(value) => update("location", value)}
-        />
-        <Field
-          label="Work style"
-          value={passport.workStyle}
-          onChange={(value) => update("workStyle", value)}
-        />
-        <Field
-          label="Availability"
-          value={passport.availability}
-          onChange={(value) => update("availability", value)}
-        />
-        <Field
-          label="Salary expectation"
-          value={passport.salaryExpectation}
-          onChange={(value) => update("salaryExpectation", value)}
-        />
-      </PassportSection>
-
-      <PassportSection
-        title="Education"
-        description="Academic background and graduation details."
-      >
-        <Field
-          label="School"
-          value={passport.school}
-          onChange={(value) => update("school", value)}
-        />
-        <Field
-          label="Department"
-          value={passport.department}
-          onChange={(value) => update("department", value)}
-        />
-        <Field
-          label="Graduation year"
-          value={passport.graduationYear}
-          onChange={(value) => update("graduationYear", value)}
-        />
-        <Field
-          label="GPA"
-          value={passport.gpa}
-          onChange={(value) => update("gpa", value)}
-        />
-      </PassportSection>
-
-      <PassportSection
-        title="Skills & Interests"
-        description="Separate items with commas for cleaner matching later."
-      >
-        <Field
-          label="Skills"
-          value={passport.skills}
-          onChange={(value) => update("skills", value)}
-        />
-        <Field
-          label="Tools / Technologies"
-          value={passport.tools}
-          onChange={(value) => update("tools", value)}
-        />
-        <Field
-          label="Languages"
-          value={passport.languages}
-          onChange={(value) => update("languages", value)}
-        />
-        <Field
-          label="Interests"
-          value={passport.interests}
-          onChange={(value) => update("interests", value)}
-        />
-      </PassportSection>
-
-      <PassportSection
-        title="Experience & Proof"
-        description="Projects, achievements, certificates, and story."
-      >
-        <Field
-          label="Experience"
-          textarea
-          value={passport.experience}
-          onChange={(value) => update("experience", value)}
-        />
-        <Field
-          label="Projects"
-          textarea
-          value={passport.projects}
-          onChange={(value) => update("projects", value)}
-        />
-        <Field
-          label="Certificates"
-          textarea
-          value={passport.certificates}
-          onChange={(value) => update("certificates", value)}
-        />
-        <Field
-          label="Achievements"
-          textarea
-          value={passport.achievements}
-          onChange={(value) => update("achievements", value)}
-        />
-        <Field
-          label="About me"
-          textarea
-          value={passport.summary}
-          onChange={(value) => update("summary", value)}
-        />
-      </PassportSection>
-
-      <PassportSection
-        title="Links"
-        description="Profiles recruiters or mentors can inspect."
-      >
-        <Field
-          label="Portfolio"
-          value={passport.portfolio}
-          onChange={(value) => update("portfolio", value)}
-        />
-        <Field
-          label="LinkedIn"
-          value={passport.linkedin}
-          onChange={(value) => update("linkedin", value)}
-        />
-        <Field
-          label="GitHub"
-          value={passport.github}
-          onChange={(value) => update("github", value)}
-        />
-      </PassportSection>
-
-      <button className="passport-submit" type="submit">
-        {submitLabel}
-      </button>
-    </form>
-  );
-}
-
-function PassportSection({ children, description, title }) {
-  return (
-    <section className="passport-section">
-      <div className="passport-section-head">
-        <h3>{title}</h3>
-        <p>{description}</p>
-      </div>
-      <div className="passport-section-fields">{children}</div>
-    </section>
-  );
-}
-
-function Field({ label, onChange, textarea, value }) {
-  return (
+function PassportFormInline({ passport, setPassport, submit, submitLabel }) {
+  function update(field, value) { setPassport({ ...passport, [field]: value }); }
+  const F = ({ label, f, textarea }) => (
     <label className={textarea ? "field tall" : "field"}>
       {label}
-      {textarea ? (
-        <textarea value={value} onChange={(event) => onChange(event.target.value)} />
-      ) : (
-        <input value={value} onChange={(event) => onChange(event.target.value)} />
-      )}
+      {textarea
+        ? <textarea value={passport[f] || ""} onChange={(e) => update(f, e.target.value)} />
+        : <input value={passport[f] || ""} onChange={(e) => update(f, e.target.value)} />
+      }
     </label>
   );
-}
-
-function OverviewPage({
-  cvs,
-  jobs,
-  recommendations,
-  selectedCv,
-  topScore,
-  setActivePage,
-  fetchJobs,
-  loadRecommendations,
-}) {
   return (
-    <div className="page-grid">
-      <section className="hero-panel">
-        <div>
-          <p className="eyebrow">AI-assisted job matching</p>
-          <h2>Turn CV skills into ranked career options.</h2>
-          <p>
-            Import roles, select a CV, rank matches, and generate a learning
-            path from missing skills.
-          </p>
-        </div>
-        <div className="hero-actions">
-          <button type="button" onClick={fetchJobs}>
-            Import Jobs
-          </button>
-          <button type="button" className="secondary" onClick={loadRecommendations}>
-            Rank Now
-          </button>
+    <form className="passport-form" onSubmit={submit}>
+      <section className="passport-section">
+        <div className="passport-section-head"><h3>Career Direction</h3><p>What kind of role are you aiming for?</p></div>
+        <div className="passport-section-fields">
+          <F label="Target role" f="targetTitle" /><F label="Location" f="location" />
+          <F label="Work style" f="workStyle" /><F label="Availability" f="availability" />
+          <F label="Salary expectation" f="salaryExpectation" />
         </div>
       </section>
-
-      <section className="metrics">
-        <Metric label="CV profiles" value={cvs.length} />
-        <Metric label="Filtered jobs" value={jobs.length} />
-        <Metric label="Recommendations" value={recommendations.length} />
-        <Metric label="Top score" value={`${topScore}%`} />
-      </section>
-
-      <section className="panel">
-        <div className="section-head">
-          <h2>Selected CV</h2>
-          <button type="button" className="ghost" onClick={() => setActivePage("cv")}>
-            Manage
-          </button>
+      <section className="passport-section">
+        <div className="passport-section-head"><h3>Education</h3><p>Academic background.</p></div>
+        <div className="passport-section-fields">
+          <F label="School" f="school" /><F label="Department" f="department" />
+          <F label="Graduation year" f="graduationYear" /><F label="GPA" f="gpa" />
         </div>
-        {selectedCv ? (
-          <ProfileSummary cv={selectedCv} />
-        ) : (
-          <p className="muted">Create a CV profile to start matching.</p>
-        )}
       </section>
-
-      <section className="panel">
-        <div className="section-head">
-          <h2>Top Recommendations</h2>
-          <button
-            type="button"
-            className="ghost"
-            onClick={() => setActivePage("jobs")}
-          >
-            Explore
-          </button>
+      <section className="passport-section">
+        <div className="passport-section-head"><h3>Skills & Interests</h3><p>Separate with commas.</p></div>
+        <div className="passport-section-fields">
+          <F label="Skills" f="skills" /><F label="Tools / Technologies" f="tools" />
+          <F label="Languages" f="languages" /><F label="Interests" f="interests" />
         </div>
-        <JobList items={recommendations.slice(0, 4)} />
       </section>
-    </div>
+      <section className="passport-section">
+        <div className="passport-section-head"><h3>Experience & Proof</h3><p>Projects, certs, achievements.</p></div>
+        <div className="passport-section-fields">
+          <F label="Experience" f="experience" textarea /><F label="Projects" f="projects" textarea />
+          <F label="Certificates" f="certificates" textarea /><F label="Achievements" f="achievements" textarea />
+          <F label="About me" f="summary" textarea />
+        </div>
+      </section>
+      <section className="passport-section">
+        <div className="passport-section-head"><h3>Links</h3><p>Portfolio, LinkedIn, GitHub.</p></div>
+        <div className="passport-section-fields">
+          <F label="Portfolio" f="portfolio" /><F label="LinkedIn" f="linkedin" /><F label="GitHub" f="github" />
+        </div>
+      </section>
+      <button className="passport-submit" type="submit">{submitLabel}</button>
+    </form>
   );
-}
-
-function CvPage({
-  cvs,
-  cvForm,
-  selectedCvId,
-  setCvForm,
-  setSelectedCvId,
-  createCv,
-}) {
-  return (
-    <div className="split-page">
-      <section className="panel">
-        <div className="section-head">
-          <div>
-            <p className="eyebrow">Profile builder</p>
-            <h2>Create a CV skill profile</h2>
-          </div>
-        </div>
-        <form className="form-stack" onSubmit={createCv}>
-          <label>
-            CV title
-            <input
-              value={cvForm.title}
-              onChange={(event) =>
-                setCvForm({ ...cvForm, title: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Skills
-            <input
-              value={cvForm.skills}
-              onChange={(event) =>
-                setCvForm({ ...cvForm, skills: event.target.value })
-              }
-            />
-          </label>
-          <button type="submit">Save CV</button>
-        </form>
-      </section>
-
-      <section className="panel">
-        <div className="section-head">
-          <h2>CV Library</h2>
-          <span className="count">{cvs.length}</span>
-        </div>
-        <div className="profile-list">
-          {cvs.map((cv) => (
-            <button
-              className={selectedCvId === cv._id ? "profile active" : "profile"}
-              key={cv._id}
-              onClick={() => setSelectedCvId(cv._id)}
-              type="button"
-            >
-              <ProfileSummary cv={cv} />
-            </button>
-          ))}
-          {cvs.length === 0 && <p className="muted">No CV profiles yet.</p>}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function JobsPage({
-  filterForm,
-  setFilterForm,
-  selectedCv,
-  jobs,
-  fetchJobs,
-  filterJobs,
-  loadRecommendations,
-}) {
-  return (
-    <div className="page-grid">
-      <section className="panel full">
-        <div className="section-head">
-          <div>
-            <p className="eyebrow">Database search</p>
-            <h2>Filter jobs against {selectedCv?.title || "a selected CV"}</h2>
-          </div>
-          <div className="button-row">
-            <button type="button" className="secondary" onClick={fetchJobs}>
-              Import Jobs
-            </button>
-            <button type="button" onClick={loadRecommendations}>
-              Recommend
-            </button>
-          </div>
-        </div>
-
-        <form className="filter-grid" onSubmit={filterJobs}>
-          <label>
-            Keyword
-            <input
-              value={filterForm.keyword}
-              onChange={(event) =>
-                setFilterForm({ ...filterForm, keyword: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Skill
-            <input
-              value={filterForm.skill}
-              onChange={(event) =>
-                setFilterForm({ ...filterForm, skill: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Min match
-            <input
-              type="number"
-              value={filterForm.minMatch}
-              onChange={(event) =>
-                setFilterForm({ ...filterForm, minMatch: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Sort
-            <select
-              value={filterForm.sort}
-              onChange={(event) =>
-                setFilterForm({ ...filterForm, sort: event.target.value })
-              }
-            >
-              <option value="score">Score</option>
-              <option value="newest">Newest</option>
-            </select>
-          </label>
-          <button type="submit">Search</button>
-        </form>
-      </section>
-
-      <section className="panel full">
-        <div className="section-head">
-          <h2>Job Results</h2>
-          <span className="count">{jobs.length}</span>
-        </div>
-        <JobList items={jobs} />
-      </section>
-    </div>
-  );
-}
-
-function InsightsPage({
-  matchForm,
-  setMatchForm,
-  runMatch,
-  analyzeGaps,
-  findBestCv,
-  matchResult,
-  analysisResult,
-  bestCvResult,
-  recommendations,
-}) {
-  return (
-    <div className="page-grid">
-      <section className="panel full">
-        <div className="section-head">
-          <div>
-            <p className="eyebrow">Explainability lab</p>
-            <h2>Compare skills and generate next steps</h2>
-          </div>
-          <button type="button" className="secondary" onClick={findBestCv}>
-            Best CV for Top Job
-          </button>
-        </div>
-
-        <form className="match-grid" onSubmit={runMatch}>
-          <label>
-            CV skills
-            <input
-              value={matchForm.cvSkills}
-              onChange={(event) =>
-                setMatchForm({ ...matchForm, cvSkills: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            Job skills
-            <input
-              value={matchForm.jobSkills}
-              onChange={(event) =>
-                setMatchForm({ ...matchForm, jobSkills: event.target.value })
-              }
-            />
-          </label>
-          <button type="submit">Run Match</button>
-          <button type="button" onClick={analyzeGaps}>
-            Build Roadmap
-          </button>
-        </form>
-      </section>
-
-      <section className="panel">
-        <div className="section-head">
-          <h2>Match Explanation</h2>
-          <ScoreBadge value={matchResult?.matchScore} />
-        </div>
-        {matchResult ? <pre>{JSON.stringify(matchResult, null, 2)}</pre> : <Empty />}
-      </section>
-
-      <section className="panel">
-        <div className="section-head">
-          <h2>Roadmap</h2>
-          <span className="count">{analysisResult?.roadmap?.length || 0}</span>
-        </div>
-        {analysisResult ? (
-          <div className="roadmap">
-            {analysisResult.roadmap.map((item) => (
-              <p key={item}>{item}</p>
-            ))}
-          </div>
-        ) : (
-          <Empty />
-        )}
-      </section>
-
-      <section className="panel full">
-        <div className="section-head">
-          <h2>Best CV Result</h2>
-          <span className="count">{recommendations.length} ranked jobs</span>
-        </div>
-        {bestCvResult ? <pre>{JSON.stringify(bestCvResult, null, 2)}</pre> : <Empty />}
-      </section>
-    </div>
-  );
-}
-
-function Metric({ label, value }) {
-  return (
-    <div className="metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function ProfileSummary({ cv }) {
-  return (
-    <div className="profile-summary">
-      <h3>{cv.title}</h3>
-      <div className="chips">
-        {cv.skills.map((skill) => (
-          <span key={skill}>{skill}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function JobList({ items }) {
-  if (!items.length) return <Empty />;
-
-  return (
-    <div className="job-list">
-      {items.slice(0, 8).map((job) => (
-        <article className="job-row" key={job._id || job.title}>
-          <div>
-            <h3>{job.title}</h3>
-            <p>{job.company || job.location || "Unknown company"}</p>
-            <div className="chips">
-              {(job.skills || []).slice(0, 5).map((skill) => (
-                <span key={skill}>{skill}</span>
-              ))}
-            </div>
-          </div>
-          <ScoreBadge value={job.matchScore} />
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function ScoreBadge({ value }) {
-  const score = value ?? 0;
-  return <strong className="score">{score}%</strong>;
-}
-
-function Empty() {
-  return <p className="muted">No data yet. Run an action to populate this view.</p>;
 }

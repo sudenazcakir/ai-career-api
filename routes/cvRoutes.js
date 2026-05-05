@@ -1,8 +1,31 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const CV = require("../models/CV");
+const { generateCvDraft } = require("../services/cvGeneratorService");
+const { rankCvsForJob } = require("../services/cvRankingService");
 
 const router = express.Router();
+
+const CV_FIELDS = [
+  "title",
+  "type",
+  "summary",
+  "skills",
+  "projects",
+  "experience",
+  "education",
+  "certifications",
+  "source",
+  "targetJobTitle",
+  "targetCompany",
+];
+
+function pickCvPayload(body = {}) {
+  return CV_FIELDS.reduce((payload, field) => {
+    if (body[field] !== undefined) payload[field] = body[field];
+    return payload;
+  }, {});
+}
 
 /**
  * @swagger
@@ -57,12 +80,63 @@ router.post("/", async (req, res) => {
       return res.status(503).json({ error: "Database is not connected" });
     }
 
-    const { title, skills = [] } = req.body;
-    const cv = await CV.create({ title, skills });
+    const cv = await CV.create(pickCvPayload(req.body));
 
     res.status(201).json({ success: true, data: cv });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /cvs/generate:
+ *   post:
+ *     summary: Generate an AI-assisted CV draft from Career Passport and target job
+ *     tags: [CVs]
+ *     responses:
+ *       200:
+ *         description: Generated CV draft
+ */
+router.post("/generate", async (req, res) => {
+  try {
+    const draft = await generateCvDraft({
+      passport: req.body.passport || {},
+      targetField: req.body.targetField || "Backend",
+      jobId: req.body.jobId,
+    });
+
+    res.json({ success: true, data: draft });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /cvs/rank-for-job:
+ *   post:
+ *     summary: Rank saved CVs for a job with AI-assisted scoring
+ *     tags: [CVs]
+ *     responses:
+ *       200:
+ *         description: Ranked CVs
+ */
+router.post("/rank-for-job", async (req, res) => {
+  try {
+    if (CV.db.readyState !== 1) {
+      return res.status(503).json({ error: "Database is not connected" });
+    }
+
+    const { jobId } = req.body;
+    if (!jobId || !mongoose.Types.ObjectId.isValid(jobId)) {
+      return res.status(400).json({ error: "Valid jobId is required" });
+    }
+
+    const result = await rankCvsForJob({ jobId });
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message });
   }
 });
 
@@ -107,11 +181,7 @@ router.put("/:id", async (req, res) => {
       return res.status(400).json({ error: "Invalid CV id" });
     }
 
-    const { title, skills } = req.body;
-    const updates = {};
-
-    if (title !== undefined) updates.title = title;
-    if (skills !== undefined) updates.skills = skills;
+    const updates = pickCvPayload(req.body);
 
     const cv = await CV.findByIdAndUpdate(id, updates, { new: true });
     if (!cv) {

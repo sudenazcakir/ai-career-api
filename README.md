@@ -131,6 +131,8 @@ npm run client
 - `GET /api/health`
 - `GET /api/cvs`
 - `POST /api/cvs`
+- `POST /api/cvs/generate`
+- `POST /api/cvs/rank-for-job`
 - `PUT /api/cvs/:id`
 - `DELETE /api/cvs/:id`
 - `GET /api/jobs`
@@ -142,8 +144,12 @@ npm run client
 - `POST /api/analysis`
 - `GET /api/best-cv/:jobId`
 - `GET /api/recommendations?cvId=...`
+- `GET /api/applications?userEmail=...`
+- `POST /api/applications`
+- `PATCH /api/applications/:id/status`
 - `GET /api/analytics/skills`
 - `GET /api/analytics/trends`
+- `POST /api/career-matrix`
 
 ## Notes
 
