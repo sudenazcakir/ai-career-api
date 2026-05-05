@@ -1,4 +1,6 @@
-import { JobList, Empty } from "../components/shared";
+import { FiBriefcase, FiSearch } from "react-icons/fi";
+import { Empty, JobList } from "../components/shared";
+import { ui } from "../styles/ui";
 
 export default function ApplicationsPage({
   applications,
@@ -28,7 +30,12 @@ export default function ApplicationsPage({
               Save roles for later, track submitted applications, and update outcomes.
             </p>
           </div>
-          <button type="button" onClick={() => setActivePage("jobs")}>
+          <button
+            type="button"
+            className={`${ui.button} inline-flex items-center justify-center gap-2`}
+            onClick={() => setActivePage("jobs")}
+          >
+            <FiBriefcase className="h-4 w-4 shrink-0" />
             Add or Save Job
           </button>
         </div>
@@ -68,20 +75,25 @@ export default function ApplicationsPage({
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="section-head">
+        <div className={ui.sectionHead}>
           <div>
-            <p className="eyebrow">Similar roles</p>
-            <h2>Based on your application history</h2>
-            <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+            <p className="mb-1 text-xs font-black uppercase tracking-normal text-teal-700">
+              Similar roles
+            </p>
+            <h2 className="text-2xl font-black text-slate-950">
+              Based on your application history
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
               Roles similar to what you've applied for before.
             </p>
           </div>
           <button
             type="button"
-            className="secondary"
+            className={`${ui.buttonGhost} inline-flex items-center justify-center gap-2`}
             onClick={loadSimilarApplications ?? undefined}
             disabled={!loadSimilarApplications}
           >
+            <FiSearch className="h-4 w-4 shrink-0" />
             Find Similar Roles
           </button>
         </div>

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   defaultMatch,
   emptyPassport,
@@ -14,7 +14,6 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
-import { flushSync } from "react-dom";
 import AccountPage from "./pages/AccountPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import ApplicationsPage from "./pages/ApplicationsPage";
@@ -50,7 +49,7 @@ import {
   trackApplication,
   updateApplicationStatus,
 } from "./services/careerService";
-import { ui } from "./styles/ui";
+import { authBg, ui } from "./styles/ui";
 import { firstError, splitSkills, validateAuthForm } from "./utils/validation";
 
 const DEFAULT_AUTHENTICATED_PATH = "/dashboard";
@@ -77,14 +76,6 @@ function getLoginPathFor(pathname, search = "") {
     : DEFAULT_AUTHENTICATED_PATH;
 
   return `/login?redirect=${encodeURIComponent(target)}`;
-}
-
-function shouldUseViewTransition() {
-  return (
-    typeof document !== "undefined" &&
-    typeof document.startViewTransition === "function" &&
-    !window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
 }
 
 export default function App() {
@@ -140,28 +131,10 @@ export default function App() {
     : redirectPath;
   const currentAuthMode = location.pathname === "/login" ? "login" : "register";
 
-  const activeTransitionRef = useRef(false);
-
   function smoothNavigate(to, options) {
     const currentPath = `${location.pathname}${location.search}`;
     if (to === currentPath || to === location.pathname) return;
-
-    if (!shouldUseViewTransition()) {
-      const el = document.documentElement;
-      el.classList.add("use-css-fallback");
-      navigate(to, options);
-      setTimeout(() => el.classList.remove("use-css-fallback"), 320);
-      return;
-    }
-
-    if (activeTransitionRef.current) return;
-    activeTransitionRef.current = true;
-    const transition = document.startViewTransition(() => {
-      flushSync(() => navigate(to, options));
-    });
-    transition.finished.finally(() => {
-      activeTransitionRef.current = false;
-    });
+    navigate(to, options);
   }
 
   function handleRouteClick(event, to) {
@@ -494,61 +467,61 @@ export default function App() {
 
   if (!user) {
     return (
-      <Routes>
-        <Route
-          path="/login"
-          element={
-            <AuthPage
-              authForm={authForm}
-              authErrors={authErrors}
-              authMode={currentAuthMode}
-              isBusy={isBusy}
-              setAuthForm={setAuthForm}
-              setAuthErrors={setAuthErrors}
-              setAuthMode={changeAuthMode}
-              submitAuth={submitAuth}
-              status={status}
-            />
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <AuthPage
-              authForm={authForm}
-              authErrors={authErrors}
-              authMode={currentAuthMode}
-              isBusy={isBusy}
-              setAuthForm={setAuthForm}
-              setAuthErrors={setAuthErrors}
-              setAuthMode={changeAuthMode}
-              submitAuth={submitAuth}
-              status={status}
-            />
-          }
-        />
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        {pages.map((page) => (
+      <div className={`min-h-screen ${authBg}`}>
+        <Routes>
           <Route
+            path="/login"
             element={
-              <Navigate
-                to={getLoginPathFor(location.pathname, location.search)}
-                replace
+              <AuthPage
+                authForm={authForm}
+                authErrors={authErrors}
+                authMode={currentAuthMode}
+                isBusy={isBusy}
+                setAuthForm={setAuthForm}
+                setAuthErrors={setAuthErrors}
+                setAuthMode={changeAuthMode}
+                submitAuth={submitAuth}
+                status={status}
               />
             }
-            key={page.id}
-            path={page.path}
           />
-        ))}
-        <Route
-          path="*"
-          element={
-            <div className="route-transition" key={location.pathname}>
+          <Route
+            path="/register"
+            element={
+              <AuthPage
+                authForm={authForm}
+                authErrors={authErrors}
+                authMode={currentAuthMode}
+                isBusy={isBusy}
+                setAuthForm={setAuthForm}
+                setAuthErrors={setAuthErrors}
+                setAuthMode={changeAuthMode}
+                submitAuth={submitAuth}
+                status={status}
+              />
+            }
+          />
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          {pages.map((page) => (
+            <Route
+              element={
+                <Navigate
+                  to={getLoginPathFor(location.pathname, location.search)}
+                  replace
+                />
+              }
+              key={page.id}
+              path={page.path}
+            />
+          ))}
+          <Route
+            path="*"
+            element={
               <NotFoundPage />
-            </div>
-          }
-        />
-      </Routes>
+            }
+          />
+        </Routes>
+      </div>
     );
   }
 
