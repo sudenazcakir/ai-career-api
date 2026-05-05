@@ -43,6 +43,9 @@
       <li>Express.js tabanli API projesi kuruldu.</li>
       <li>Swagger API dokumantasyonu eklendi.</li>
       <li>MongoDB baglantisi <code>MONGO_URI</code> uzerinden calisiyor.</li>
+      <li>JWT tabanli register/login akisi eklendi.</li>
+      <li><code>POST /api/auth/register</code>, <code>POST /api/auth/login</code> ve <code>/api-docs</code> public kalir.</li>
+      <li><code>GET /api/health</code> dahil diger tum <code>/api/*</code> endpointleri JWT token ister.</li>
       <li>Adzuna API baglantisi yapildi.</li>
       <li><code>.env</code> ile gizli bilgiler yonetiliyor.</li>
       <li>Backend adresi: <code>http://localhost:5001</code></li>
@@ -54,7 +57,7 @@
       <li>Adzuna API'den gercek is ilanlari cekilebiliyor.</li>
       <li>Cekilen is ilanlari MongoDB'ye kaydediliyor.</li>
       <li>Duplicate kontrolu <code>title + company</code> uzerinden yapiliyor.</li>
-      <li><code>models/Job.js</code> ile Job modeli olusturuldu.</li>
+      <li><code>backend/models/Job.js</code> ile Job modeli olusturuldu.</li>
       <li><code>GET /api/jobs/fetch</code> endpoint'i eklendi.</li>
       <li><code>GET /api/jobs/filter</code> endpoint'i eklendi.</li>
       <li><code>POST /api/jobs/import-adzuna</code> endpoint'i eklendi.</li>
@@ -64,9 +67,9 @@
 
     <h2>3. CV Ozellikleri</h2>
     <ul>
-      <li><code>models/CV.js</code> ile CV modeli olusturuldu.</li>
+      <li><code>backend/models/CV.js</code> ile CV modeli olusturuldu.</li>
       <li><code>POST /api/cvs</code> ile CV olusturulabiliyor.</li>
-      <li><code>GET /api/cvs</code> ile CV listesi alinabiliyor.</li>
+      <li><code>GET /api/cvs</code> ile login olan kullanicinin CV listesi alinabiliyor.</li>
       <li><code>PUT /api/cvs/:id</code> ile CV guncellenebiliyor.</li>
       <li><code>DELETE /api/cvs/:id</code> ile CV silinebiliyor.</li>
       <li>CV bilgileri MongoDB'ye kaydediliyor.</li>
@@ -88,7 +91,7 @@
       <li>Recommendation endpoint'i once manuel calisiyordu.</li>
       <li>Daha sonra gercek MongoDB verisine baglandi.</li>
       <li><code>GET /api/recommendations?cvId=...</code> endpoint'i eklendi.</li>
-      <li>CV MongoDB'den cekiliyor.</li>
+      <li>CV MongoDB'den cekiliyor ve login olan kullaniciya ait olup olmadigi kontrol ediliyor.</li>
       <li>Job kayitlari MongoDB'den cekiliyor.</li>
       <li>CV skills ile job skills karsilastirilip en iyi isler oneriliyor.</li>
       <li>En iyi 5 oneri donduruluyor.</li>
@@ -98,7 +101,7 @@
     <ul>
       <li><code>GET /api/best-cv/:jobId</code> endpoint'i eklendi.</li>
       <li>Job MongoDB'den cekiliyor.</li>
-      <li>Tum CV kayitlari MongoDB'den cekiliyor.</li>
+      <li>Login olan kullanicinin CV kayitlari MongoDB'den cekiliyor.</li>
       <li>Ilgili job icin en iyi CV bulunuyor.</li>
       <li>En iyi CV ve skor donduruluyor.</li>
     </ul>
@@ -112,14 +115,14 @@
 
     <h2>8. Analytics Placeholder Endpointleri</h2>
     <ul>
-      <li><code>GET /api/analytics/skills</code> endpoint'i placeholder olarak eklendi.</li>
-      <li><code>GET /api/analytics/trends</code> endpoint'i placeholder olarak eklendi.</li>
-      <li>Su an her iki endpoint de future-ready bos analytics payload'i donduruyor.</li>
+      <li><code>GET /api/analytics/skills</code> endpoint'i kullanicinin CV'leri ve global Job verisi uzerinden eksik skill dagilimi donduruyor.</li>
+      <li><code>GET /api/analytics/trends</code> endpoint'i Adzuna market verisi veya MongoDB job verisi uzerinden trend ozeti donduruyor.</li>
+      <li>Frontend tarafinda Chart.js ile analytics grafik panelleri gosteriliyor.</li>
     </ul>
 
     <h2>9. Skill Extractor Servisi</h2>
     <ul>
-      <li><code>services/skillExtractor.js</code> olusturuldu.</li>
+      <li><code>backend/services/skillExtractor.js</code> olusturuldu.</li>
       <li>Job description icinden skill yakalama yapiliyor.</li>
       <li>Desteklenen ornek skill'ler: Java, SQL, React, Node, Docker, Python.</li>
     </ul>
@@ -130,6 +133,8 @@
       <li>Frontend adresi: <code>http://localhost:5173</code></li>
       <li>Backend adresi: <code>http://localhost:5001</code></li>
       <li>Vite proxy ile <code>/api</code> istekleri backend'e yonlendiriliyor.</li>
+      <li>Frontend stilleri Tailwind utility class yapisina tasindi.</li>
+      <li><code>styles.css</code> yalnizca Tailwind import ve global/base stilleri tutar.</li>
     </ul>
 
     <h2>11. Frontend Sayfalari</h2>
@@ -146,7 +151,8 @@
       <li>Site acildiginda kullaniciya Sign Up / Sign In ekrani geliyor.</li>
       <li>Kayit icin first name, last name, email, password ve telefon bilgisi aliniyor.</li>
       <li>Telefon alaninda ulke kodu secimi bulunuyor.</li>
-      <li>Kullanici verileri simdilik localStorage'da saklaniyor.</li>
+      <li>Kullanici register/login akisi backend auth endpointleri uzerinden calisiyor.</li>
+      <li>Frontend JWT token'i localStorage'da sakliyor; profil ve Career Passport verileri MongoDB'de tutuluyor.</li>
     </ul>
 
     <h2>13. Career Passport</h2>
@@ -203,6 +209,7 @@
       <li><code>npm run client</code> frontend'i baslatir.</li>
       <li><code>npm run seed:demo</code> demo CV kaydini olusturur veya gunceller.</li>
       <li><code>npm run check:db</code> opsiyonel olarak MongoDB baglantisini kontrol eder.</li>
+      <li>Tailwind CSS pipeline ve Chart.js frontend analytics icin kuruludur.</li>
     </ul>
   </body>
 </html>

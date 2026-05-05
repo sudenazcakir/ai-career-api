@@ -2,13 +2,13 @@
   "name": "ai-career-api",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "backend/server.js",
   "scripts": {
-    "server": "node server.js",
+    "server": "node backend/server.js",
     "client": "vite --host 0.0.0.0",
     "build": "vite build",
-    "seed:demo": "node scripts/seedDemo.js",
-    "check:db": "node scripts/checkDb.js",
+    "seed:demo": "node backend/scripts/seedDemo.js",
+    "check:db": "node backend/scripts/checkDb.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
