@@ -92,7 +92,7 @@ router.get("/best-cv/:jobId", async (req, res) => {
     const job = await Job.findById(req.params.jobId);
     if (!job) return res.status(404).json({ error: "Job not found" });
 
-    const cvs = await CV.find();
+    const cvs = await CV.find({ owner: req.user._id });
 
     let bestCv = null;
     let bestScore = 0;

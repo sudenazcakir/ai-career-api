@@ -6,6 +6,7 @@ require("dotenv").config();
 const swaggerUi = require("swagger-ui-express");
 const swaggerJsdoc = require("swagger-jsdoc");
 const connectDB = require("./config/db");
+const requireAuth = require("./middleware/authMiddleware");
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -27,6 +28,16 @@ const options = {
       description: "API docs for AI-assisted job matching system",
     },
     servers: [{ url: `http://localhost:${PORT}/api` }],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
+    security: [{ bearerAuth: [] }],
   },
   apis: ["./routes/*.js"],
 };
@@ -34,19 +45,23 @@ const options = {
 const specs = swaggerJsdoc(options);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 
-// Health endpoint
-app.get("/api/health", (req, res) => {
-  res.json({ success: true, message: "API is running" });
-});
-
 // Routes
 const matchRoutes = require("./routes/matchRoutes");
+const authRoutes = require("./routes/authRoutes");
 const jobRoutes = require("./routes/jobRoutes");
 const cvRoutes = require("./routes/cvRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
 const analysisRoutes = require("./routes/analysisRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const careerMatrixRoutes = require("./routes/careerMatrixRoutes");
+
+app.use("/api", authRoutes);
+app.use("/api", requireAuth);
+
+// Health endpoint
+app.get("/api/health", (req, res) => {
+  res.json({ success: true, message: "API is running" });
+});
 
 app.use("/api", matchRoutes);
 app.use("/api", jobRoutes);

@@ -8,7 +8,11 @@ const extractSkills = require("../services/skillExtractor");
 const router = express.Router();
 
 function escapeRegex(str) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeSkills(skills = []) {
+  return [...new Set(skills.map((skill) => String(skill).trim()).filter(Boolean))];
 }
 
 function calculateMatchScore(jobSkills = [], userSkills = []) {
@@ -16,7 +20,10 @@ function calculateMatchScore(jobSkills = [], userSkills = []) {
     return 0;
   }
 
-  const matches = jobSkills.filter((skill) => userSkills.includes(skill));
+  const normalizedUserSkills = userSkills.map((skill) => String(skill).toLowerCase());
+  const matches = jobSkills.filter((skill) =>
+    normalizedUserSkills.includes(String(skill).toLowerCase())
+  );
   return Math.round((matches.length / jobSkills.length) * 100);
 }
 
@@ -27,9 +34,15 @@ function buildJobDocument(job) {
   return {
     title,
     description,
-    skills: extractSkills(`${title} ${description}`),
+    skills: normalizeSkills(extractSkills(`${title} ${description}`)),
     company: job.company?.display_name || "",
     location: job.location?.display_name || "",
+    salaryMin: job.salary_min || null,
+    salaryMax: job.salary_max || null,
+    category: job.category?.label || job.category?.tag || "",
+    contractType: job.contract_type || "",
+    contractTime: job.contract_time || "",
+    redirectUrl: job.redirect_url || "",
     createdAt: job.created ? new Date(job.created) : new Date(),
   };
 }
@@ -51,8 +64,8 @@ async function saveAdzunaJobs(adzunaJobs) {
   try {
     const result = await Job.bulkWrite(ops, { ordered: false });
     return {
-      imported: result.upsertedCount,
-      updated: result.modifiedCount,
+      imported: result.upsertedCount || 0,
+      updated: result.modifiedCount || 0,
     };
   } catch (err) {
     // ordered: false allows partial success; extract counts from the error result
@@ -156,13 +169,17 @@ router.get("/jobs/filter", async (req, res) => {
 
     const query = {};
     if (keyword) {
-      query.title = { $regex: keyword, $options: "i" };
+      query.$or = [
+        { title: { $regex: escapeRegex(keyword), $options: "i" } },
+        { company: { $regex: escapeRegex(keyword), $options: "i" } },
+        { description: { $regex: escapeRegex(keyword), $options: "i" } },
+      ];
     }
     if (skill) {
       query.skills = { $regex: `^${escapeRegex(skill)}$`, $options: "i" };
     }
 
-    let jobs = await Job.find(query);
+    let jobs = await Job.find(query).sort({ createdAt: -1 });
 
     let userSkills = [];
     if (cvId) {
@@ -170,7 +187,7 @@ router.get("/jobs/filter", async (req, res) => {
         return res.status(400).json({ error: "Invalid cvId" });
       }
 
-      const cv = await CV.findById(cvId);
+      const cv = await CV.findOne({ _id: cvId, owner: req.user._id });
       if (!cv) {
         return res.status(404).json({ error: "CV not found" });
       }
@@ -235,6 +252,10 @@ router.post("/jobs", async (req, res) => {
       return res.status(400).json({ error: "title and company are required" });
     }
 
+    if (!Array.isArray(skills)) {
+      return res.status(400).json({ error: "skills must be an array" });
+    }
+
     const existing = await Job.findOne({ title, company });
     if (existing) {
       return res.status(200).json({
@@ -244,7 +265,11 @@ router.post("/jobs", async (req, res) => {
       });
     }
 
-    const created = await Job.create({ title, company, skills });
+    const created = await Job.create({
+      title: title.trim(),
+      company: company.trim(),
+      skills: normalizeSkills(skills),
+    });
 
     res.status(201).json({ success: true, data: created });
   } catch (error) {

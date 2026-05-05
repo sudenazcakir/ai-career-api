@@ -21,7 +21,10 @@ AI Career API, AI-assisted career matching demo uygulamasidir. Backend tarafinda
 - Match score ve missing skills analizi
 - Best CV for job akisi
 - Analytics placeholder endpointleri
-- Local demo auth + Career Passport verilerinin localStorage'da tutulmasi
+- JWT tabanli register/login akisi
+- Kullanici profili ve Career Passport verilerinin MongoDB'de tutulmasi
+- Chart.js ile analytics gorsellestirme
+- Tailwind CSS pipeline kurulumu
 
 ## Requirements
 
@@ -44,6 +47,8 @@ PORT=5001
 MONGO_URI=mongodb://127.0.0.1:27017/ai-career-api
 ADZUNA_APP_ID=your_adzuna_app_id
 ADZUNA_APP_KEY=your_adzuna_app_key
+JWT_SECRET=replace_this_local_dev_secret
+VITE_BACKEND_ORIGIN=http://localhost:5001
 ```
 
 `.env.example` varsayilan olarak local MongoDB icin hazirdir. Atlas kullanacaksaniz sadece `MONGO_URI` degerini Atlas connection string ile degistirin.
@@ -82,6 +87,8 @@ npm run seed:demo
 ```
 
 `seed:demo` bir test verisi yukleme komutudur. MongoDB'ye `Demo Candidate` adinda tek bir demo CV kaydi olusturur veya ayni kaydi gunceller.
+
+Not: CV kayitlari artik kullanici bazli izole edilir. `seed:demo` owner bilgisi olmayan genel bir demo kaydi olusturur; normal login olan kullanicilar kendi hesaplarinda sadece kendilerinin olusturdugu CV'leri gorur.
 
 Ne zaman kullanilir:
 
@@ -128,7 +135,18 @@ npm run client
 
 ## Available API Surface
 
+Public:
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api-docs`
+
+Protected with `Authorization: Bearer <token>`:
+
 - `GET /api/health`
+- `GET /api/me`
+- `PUT /api/me`
+- `PUT /api/me/passport`
 - `GET /api/cvs`
 - `POST /api/cvs`
 - `PUT /api/cvs/:id`
@@ -150,7 +168,10 @@ npm run client
 - `MONGO_URI` yoksa backend acilir ama DB gerektiren endpointler `503` donebilir.
 - `ADZUNA_APP_ID` ve `ADZUNA_APP_KEY` sadece Adzuna import endpointleri icin gerekir.
 - Swagger backend tarafinda servis edilir; adres `http://localhost:5001/api-docs`.
-- Demo sign-in/sign-up akisi localStorage tabanlidir; gercek auth sistemi degildir.
+- Sign-in/sign-up akisi JWT tabanlidir. Frontend token'i localStorage'da tutar.
+- Swagger haric tum `/api/*` endpointleri register/login disinda JWT ister.
+- CV kayitlari kullanici bazli scope edilir; bir kullanici baska kullanicinin CV listesini, recommendation CV context'ini veya best-CV hesaplamasini gormez.
+- Frontend stilleri Tailwind utility class yapisina tasindi; `styles.css` sadece global/base stilleri tutar.
 
 ## Reference Documents
 
