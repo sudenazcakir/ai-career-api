@@ -7,9 +7,10 @@ export default function AnalyticsPage({
   applications,
   jobs,
   recommendations,
-  skillFrequency,
-  loadSkillFrequency,
+  skillAnalytics,
+  loadAnalytics,
 }) {
+  const skillFrequency = skillAnalytics?.data || [];
   const statusCounts = ["Saved for Later", "Under Review", "Accepted", "Rejected"].map(
     (s) => ({ status: s, count: applications.filter((a) => a.status === s).length })
   );
@@ -57,7 +58,7 @@ export default function AnalyticsPage({
               </p>
               <h3 className="text-xl font-black text-slate-950">Missing skills</h3>
             </div>
-            <button type="button" className="secondary" onClick={loadSkillFrequency}>
+            <button type="button" className="secondary" onClick={loadAnalytics}>
               Analyze
             </button>
           </div>
@@ -68,9 +69,14 @@ export default function AnalyticsPage({
                   <span className="skill-freq-rank">#{i + 1}</span>
                   <span className="skill-freq-name">{item.skill}</span>
                   <div className="skill-freq-bar-wrap">
-                    <div className="skill-freq-bar" style={{ width: `${Math.min(100, item.count * 10)}%` }} />
+                    <div
+                      className="skill-freq-bar"
+                      style={{
+                        width: `${Math.min(100, item.share || item.missingCount || 0)}%`,
+                      }}
+                    />
                   </div>
-                  <span className="skill-freq-count">{item.count}</span>
+                  <span className="skill-freq-count">{item.missingCount || item.count || 0}</span>
                 </div>
               ))}
             </div>

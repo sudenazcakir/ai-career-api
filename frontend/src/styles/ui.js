@@ -1,13 +1,13 @@
 export const ui = {
-  shell: "min-h-screen overflow-x-hidden bg-[#eef2f3] text-slate-950 lg:grid lg:grid-cols-[260px_minmax(0,1fr)]",
+  shell: "min-h-screen overflow-x-hidden bg-[#eef2f3] text-slate-950 lg:pl-[260px]",
   sidebar:
-    "sticky top-0 flex h-screen flex-col gap-[22px] border-r border-[#d6dee2] bg-[#f9fbfb] p-[22px] max-lg:static max-lg:h-auto max-sm:p-4",
+    "fixed inset-y-0 left-0 z-10 flex w-[260px] flex-col gap-[22px] border-r border-[#d6dee2] bg-[#f9fbfb] p-[22px] max-lg:static max-lg:h-auto max-lg:w-auto max-sm:p-4",
   brand: "flex min-w-0 items-center gap-3",
   brandMark:
     "grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-teal-700 text-white font-black",
   nav: "grid gap-2 max-lg:grid-cols-3 max-sm:grid-cols-2",
   navButton:
-    "min-h-10 w-full rounded-lg bg-transparent px-3.5 text-left font-bold text-slate-700 transition hover:bg-[#dcefed] hover:text-[#0f4f49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2",
+    "flex min-h-10 w-full items-center rounded-lg bg-transparent px-3.5 text-left font-bold text-slate-700 no-underline transition hover:bg-[#dcefed] hover:text-[#0f4f49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2",
   navButtonActive: "bg-[#dcefed] text-[#0f4f49] shadow-sm",
   docLink:
     "mt-auto inline-flex min-h-10 items-center justify-center rounded-lg bg-slate-950 px-3.5 text-center font-bold text-white no-underline transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2 max-lg:mt-0",

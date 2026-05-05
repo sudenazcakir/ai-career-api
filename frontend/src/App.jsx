@@ -5,6 +5,15 @@ import {
   emptyUser,
   pages,
 } from "./constants/appData";
+import {
+  Navigate,
+  NavLink,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import AccountPage from "./pages/AccountPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import ApplicationsPage from "./pages/ApplicationsPage";
@@ -42,10 +51,38 @@ import {
 import { ui } from "./styles/ui";
 import { firstError, splitSkills, validateAuthForm } from "./utils/validation";
 
+const DEFAULT_AUTHENTICATED_PATH = "/dashboard";
+const protectedPaths = pages.map((page) => page.path);
+const pageById = Object.fromEntries(pages.map((page) => [page.id, page]));
+
+function isProtectedPath(pathname) {
+  return protectedPaths.includes(pathname);
+}
+
+function getSafeRedirect(searchParams) {
+  const redirect = searchParams.get("redirect");
+  if (!redirect || !redirect.startsWith("/")) return DEFAULT_AUTHENTICATED_PATH;
+
+  const redirectPath = redirect.split("?")[0];
+  if (!isProtectedPath(redirectPath)) return DEFAULT_AUTHENTICATED_PATH;
+
+  return redirect;
+}
+
+function getLoginPathFor(pathname, search = "") {
+  const target = isProtectedPath(pathname)
+    ? `${pathname}${search}`
+    : DEFAULT_AUTHENTICATED_PATH;
+
+  return `/login?redirect=${encodeURIComponent(target)}`;
+}
+
 export default function App() {
-  const [activePage, setActivePage] = useState("overview");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [status, setStatus] = useState("System ready");
-  const [authMode, setAuthMode] = useState("register");
+  const [authChecked, setAuthChecked] = useState(false);
   const [user, setUser] = useState(null);
   const [authForm, setAuthForm] = useState(emptyUser);
   const [authErrors, setAuthErrors] = useState({});
@@ -73,6 +110,7 @@ export default function App() {
   const [trendAnalytics, setTrendAnalytics] = useState(null);
   const [applications, setApplications] = useState([]);
   const [pendingAction, setPendingAction] = useState("");
+  const applicationStatuses = ["Saved for Later", "Under Review", "Accepted", "Rejected"];
 
   const selectedCv = useMemo(
     () => cvs.find((cv) => cv._id === selectedCvId),
@@ -81,6 +119,24 @@ export default function App() {
   const bestJobId = jobs[0]?._id || recommendations[0]?._id;
   const topScore = recommendations[0]?.matchScore ?? jobs[0]?.matchScore ?? 0;
   const isBusy = Boolean(pendingAction);
+  const activePage =
+    pages.find((page) => page.path === location.pathname) || pages[0];
+  const redirectPath = getSafeRedirect(searchParams);
+  const destinationPath = isProtectedPath(location.pathname)
+    ? `${location.pathname}${location.search}`
+    : redirectPath;
+  const currentAuthMode = location.pathname === "/login" ? "login" : "register";
+
+  function navigatePage(pageId) {
+    navigate(pageById[pageId]?.path || DEFAULT_AUTHENTICATED_PATH);
+  }
+
+  function changeAuthMode(nextMode) {
+    setAuthErrors({});
+    navigate(`${nextMode === "login" ? "/login" : "/register"}${location.search}`, {
+      replace: true,
+    });
+  }
 
   async function loadCvs() {
     const data = await listCvs();
@@ -118,7 +174,10 @@ export default function App() {
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
-    if (!token) return;
+    if (!token) {
+      setAuthChecked(true);
+      return;
+    }
 
     getCurrentUser()
       .then((data) => {
@@ -129,6 +188,9 @@ export default function App() {
       .catch(() => {
         localStorage.removeItem("authToken");
         setUser(null);
+      })
+      .finally(() => {
+        setAuthChecked(true);
       });
   }, []);
 
@@ -142,7 +204,7 @@ export default function App() {
   async function submitAuth(event) {
     event.preventDefault();
 
-    const nextErrors = validateAuthForm(authForm, authMode);
+    const nextErrors = validateAuthForm(authForm, currentAuthMode);
     setAuthErrors(nextErrors);
     if (Object.keys(nextErrors).length) {
       setStatus(firstError(nextErrors));
@@ -150,17 +212,20 @@ export default function App() {
     }
 
     const payload =
-      authMode === "login"
+      currentAuthMode === "login"
         ? { email: authForm.email, password: authForm.password }
         : authForm;
 
     try {
-      setPendingAction(authMode);
-      setStatus(authMode === "login" ? "Signing in" : "Creating account");
+      setPendingAction(currentAuthMode);
+      setStatus(currentAuthMode === "login" ? "Signing in" : "Creating account");
       const data =
-        authMode === "login" ? await loginUser(payload) : await registerUser(payload);
+        currentAuthMode === "login" ? await loginUser(payload) : await registerUser(payload);
       applyAuthSession(data);
-      setStatus(authMode === "login" ? "Signed in" : "Account created");
+      if (data.user.passportCompleted) {
+        navigate(destinationPath, { replace: true });
+      }
+      setStatus(currentAuthMode === "login" ? "Signed in" : "Account created");
     } catch (error) {
       if (error.errors) {
         setAuthErrors(error.errors);
@@ -209,6 +274,7 @@ export default function App() {
       setUser(data.data);
       setPassport(data.data.passport || nextPassport);
       setShowOnboarding(false);
+      navigate(destinationPath, { replace: true });
       setStatus("Career Passport saved");
     } finally {
       setPendingAction("");
@@ -224,7 +290,7 @@ export default function App() {
   function signOut() {
     localStorage.removeItem("authToken");
     setUser(null);
-    setActivePage("overview");
+    navigate("/login", { replace: true });
     setStatus("Signed out");
   }
 
@@ -234,8 +300,9 @@ export default function App() {
       setUser(null);
       setShowOnboarding(false);
       setStatus("Session expired. Please sign in again.");
+      navigate(getLoginPathFor(location.pathname, location.search), { replace: true });
     });
-  }, []);
+  }, [location.pathname, location.search, navigate]);
 
   async function runAction(label, action) {
     try {
@@ -361,19 +428,63 @@ export default function App() {
     });
   }
 
+  if (!authChecked) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[#eef2f3] p-6">
+        <p className={ui.pulse}>
+          <span className={ui.pulseDot} />
+          Checking session
+        </p>
+      </main>
+    );
+  }
+
   if (!user) {
     return (
-      <AuthPage
-        authForm={authForm}
-        authErrors={authErrors}
-        authMode={authMode}
-        isBusy={isBusy}
-        setAuthForm={setAuthForm}
-        setAuthErrors={setAuthErrors}
-        setAuthMode={setAuthMode}
-        submitAuth={submitAuth}
-        status={status}
-      />
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <AuthPage
+              authForm={authForm}
+              authErrors={authErrors}
+              authMode={currentAuthMode}
+              isBusy={isBusy}
+              setAuthForm={setAuthForm}
+              setAuthErrors={setAuthErrors}
+              setAuthMode={changeAuthMode}
+              submitAuth={submitAuth}
+              status={status}
+            />
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <AuthPage
+              authForm={authForm}
+              authErrors={authErrors}
+              authMode={currentAuthMode}
+              isBusy={isBusy}
+              setAuthForm={setAuthForm}
+              setAuthErrors={setAuthErrors}
+              setAuthMode={changeAuthMode}
+              submitAuth={submitAuth}
+              status={status}
+            />
+          }
+        />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route
+          path="*"
+          element={
+            <Navigate
+              to={getLoginPathFor(location.pathname, location.search)}
+              replace
+            />
+          }
+        />
+      </Routes>
     );
   }
 
@@ -404,24 +515,39 @@ export default function App() {
         <nav className={ui.nav}>
           <p className="px-3 pt-3 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Workspace</p>
           {pages.filter((p) => p.section === "workspace").map((page) => (
-            <button className={`${ui.navButton} ${activePage === page.id ? ui.navButtonActive : ""}`}
-              key={page.id} onClick={() => setActivePage(page.id)} type="button">
+            <NavLink
+              className={({ isActive }) =>
+                `${ui.navButton} ${isActive ? ui.navButtonActive : ""}`
+              }
+              key={page.id}
+              to={page.path}
+            >
               {page.label}
-            </button>
+            </NavLink>
           ))}
           <p className="px-3 pt-4 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Growth</p>
           {pages.filter((p) => p.section === "growth").map((page) => (
-            <button className={`${ui.navButton} ${activePage === page.id ? ui.navButtonActive : ""}`}
-              key={page.id} onClick={() => setActivePage(page.id)} type="button">
+            <NavLink
+              className={({ isActive }) =>
+                `${ui.navButton} ${isActive ? ui.navButtonActive : ""}`
+              }
+              key={page.id}
+              to={page.path}
+            >
               {page.label}
-            </button>
+            </NavLink>
           ))}
           <p className="px-3 pt-4 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Applications</p>
           {pages.filter((p) => p.section === "apply").map((page) => (
-            <button className={`${ui.navButton} ${activePage === page.id ? ui.navButtonActive : ""}`}
-              key={page.id} onClick={() => setActivePage(page.id)} type="button">
+            <NavLink
+              className={({ isActive }) =>
+                `${ui.navButton} ${isActive ? ui.navButtonActive : ""}`
+              }
+              key={page.id}
+              to={page.path}
+            >
               {page.label}
-            </button>
+            </NavLink>
           ))}
         </nav>
 
@@ -440,7 +566,7 @@ export default function App() {
           <div>
             <p className={ui.eyebrow}>Live backend demo</p>
             <h1 className={ui.pageTitle}>
-              {pages.find((page) => page.id === activePage)?.label}
+              {activePage.label}
             </h1>
           </div>
           <div className={ui.headerActions}>
@@ -451,123 +577,149 @@ export default function App() {
             <button
               type="button"
               className={ui.accountButton}
-              onClick={() => setActivePage("account")}
+              onClick={() => navigatePage("account")}
             >
               {user.photo ? <img alt="Profile" src={user.photo} /> : user.firstName?.[0] || "U"}
             </button>
           </div>
         </header>
 
-        {activePage === "overview" && (
-          <OverviewPage
-            cvs={cvs}
-            jobs={jobs}
-            recommendations={recommendations}
-            selectedCv={selectedCv}
-            topScore={topScore}
-            setActivePage={setActivePage}
-            fetchJobs={fetchJobs}
-            loadRecommendations={loadRecommendations}
-            isBusy={isBusy}
+        <Routes>
+          <Route path="/" element={<Navigate to={DEFAULT_AUTHENTICATED_PATH} replace />} />
+          <Route path="/login" element={<Navigate to={destinationPath} replace />} />
+          <Route path="/register" element={<Navigate to={destinationPath} replace />} />
+          <Route
+            path="/dashboard"
+            element={
+              <OverviewPage
+                cvs={cvs}
+                jobs={jobs}
+                recommendations={recommendations}
+                selectedCv={selectedCv}
+                topScore={topScore}
+                setActivePage={navigatePage}
+                fetchJobs={fetchJobs}
+                loadRecommendations={loadRecommendations}
+                isBusy={isBusy}
+              />
+            }
           />
-        )}
-
-        {activePage === "cv" && (
-          <CvPage
-            cvs={cvs}
-            cvForm={cvForm}
-            selectedCvId={selectedCvId}
-            setCvForm={setCvForm}
-            setSelectedCvId={setSelectedCvId}
-            createCv={createCv}
-            isBusy={isBusy}
+          <Route
+            path="/cvs"
+            element={
+              <CvPage
+                cvs={cvs}
+                cvForm={cvForm}
+                selectedCvId={selectedCvId}
+                setCvForm={setCvForm}
+                setSelectedCvId={setSelectedCvId}
+                createCv={createCv}
+                isBusy={isBusy}
+              />
+            }
           />
-        )}
-
-        {activePage === "jobs" && (
-          <JobsPage
-            filterForm={filterForm}
-            setFilterForm={setFilterForm}
-            selectedCv={selectedCv}
-            jobs={jobs}
-            fetchJobs={fetchJobs}
-            filterJobs={filterJobs}
-            loadRecommendations={loadRecommendations}
-            isBusy={isBusy}
+          <Route
+            path="/jobs"
+            element={
+              <JobsPage
+                filterForm={filterForm}
+                setFilterForm={setFilterForm}
+                selectedCv={selectedCv}
+                jobs={jobs}
+                fetchJobs={fetchJobs}
+                filterJobs={filterJobs}
+                loadRecommendations={loadRecommendations}
+                isBusy={isBusy}
+              />
+            }
           />
-        )}
-
-        {activePage === "insights" && (
-          <InsightsPage
-            matchForm={matchForm}
-            setMatchForm={setMatchForm}
-            runMatch={runMatch}
-            analyzeGaps={analyzeGaps}
-            findBestCv={findBestCv}
-            matchResult={matchResult}
-            analysisResult={analysisResult}
-            bestCvResult={bestCvResult}
-            recommendations={recommendations}
-            skillAnalytics={skillAnalytics}
-            trendAnalytics={trendAnalytics}
-            loadAnalytics={loadAnalytics}
-            isBusy={isBusy}
+          <Route
+            path="/skill-gaps"
+            element={
+              <SkillGapPage
+                jobs={jobs}
+                recommendations={recommendations}
+                selectedCv={selectedCv}
+                setActivePage={navigatePage}
+              />
+            }
           />
-        )}
-
-        {activePage === "skillgap" && (
-          <SkillGapPage
-            jobs={jobs}
-            recommendations={recommendations}
-            selectedCv={selectedCv}
-            setActivePage={setActivePage}
+          <Route
+            path="/roadmap"
+            element={
+              <RoadmapPage
+                jobs={jobs}
+                recommendations={recommendations}
+                selectedCv={selectedCv}
+                analyzeGaps={analyzeGaps}
+                analysisResult={analysisResult}
+                matchResult={matchResult}
+              />
+            }
           />
-        )}
-
-        {activePage === "roadmap" && (
-          <RoadmapPage
-            jobs={jobs}
-            recommendations={recommendations}
-            selectedCv={selectedCv}
-            analyzeGaps={analyzeGaps}
-            analysisResult={analysisResult}
-            matchResult={matchResult}
+          <Route
+            path="/applications"
+            element={
+              <ApplicationsPage
+                applications={applications}
+                applicationStatuses={applicationStatuses}
+                selectedCvId={selectedCvId}
+                trackApplication={handleTrackApplication}
+                updateApplicationStatus={handleUpdateApplicationStatus}
+                setActivePage={navigatePage}
+              />
+            }
           />
-        )}
-
-        {activePage === "applications" && (
-          <ApplicationsPage
-            applications={applications}
-            selectedCvId={selectedCvId}
-            trackApplication={handleTrackApplication}
-            updateApplicationStatus={handleUpdateApplicationStatus}
-            setActivePage={setActivePage}
+          <Route
+            path="/trends"
+            element={
+              <AnalyticsPage
+                applications={applications}
+                jobs={jobs}
+                recommendations={recommendations}
+                skillAnalytics={skillAnalytics}
+                trendAnalytics={trendAnalytics}
+                loadAnalytics={loadAnalytics}
+              />
+            }
           />
-        )}
-
-        {activePage === "analytics" && (
-          <AnalyticsPage
-            applications={applications}
-            jobs={jobs}
-            recommendations={recommendations}
-            skillAnalytics={skillAnalytics}
-            trendAnalytics={trendAnalytics}
-            loadAnalytics={loadAnalytics}
+          <Route
+            path="/insights"
+            element={
+              <InsightsPage
+                matchForm={matchForm}
+                setMatchForm={setMatchForm}
+                runMatch={runMatch}
+                analyzeGaps={analyzeGaps}
+                findBestCv={findBestCv}
+                matchResult={matchResult}
+                analysisResult={analysisResult}
+                bestCvResult={bestCvResult}
+                recommendations={recommendations}
+                skillAnalytics={skillAnalytics}
+                trendAnalytics={trendAnalytics}
+                loadAnalytics={loadAnalytics}
+                isBusy={isBusy}
+              />
+            }
           />
-        )}
-
-        {activePage === "account" && (
-          <AccountPage
-            passport={passport}
-            savePassport={savePassport}
-            setPassport={setPassport}
-            signOut={signOut}
-            updateUser={updateUser}
-            user={user}
-            renderAvatar={renderAvatar}
-            isBusy={isBusy}
+          <Route
+            path="/profile"
+            element={
+              <AccountPage
+                passport={passport}
+                savePassport={savePassport}
+                setPassport={setPassport}
+                signOut={signOut}
+                updateUser={updateUser}
+                user={user}
+                renderAvatar={renderAvatar}
+                isBusy={isBusy}
+              />
+            }
           />
-        )}
+          <Route path="*" element={<Navigate to={DEFAULT_AUTHENTICATED_PATH} replace />} />
+        </Routes>
       </main>
     </div>
   );

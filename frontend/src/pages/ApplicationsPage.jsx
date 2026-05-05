@@ -2,11 +2,11 @@ import { JobList, Empty } from "../components/shared";
 
 export default function ApplicationsPage({
   applications,
-  applicationStatuses,
+  applicationStatuses = ["Saved for Later", "Under Review", "Accepted", "Rejected"],
   setActivePage,
   updateApplicationStatus,
-  similarApplications,
-  loadSimilarApplications,
+  similarApplications = [],
+  loadSimilarApplications = () => {},
 }) {
   const columns = applicationStatuses.map((status) => ({
     status,

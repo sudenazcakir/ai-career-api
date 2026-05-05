@@ -34,6 +34,18 @@ export default function CareerMatrixPanel({ careerMatrix, status }) {
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    devicePixelRatio:
+      typeof window === "undefined" ? 2 : Math.max(window.devicePixelRatio || 1, 2),
+    elements: {
+      line: {
+        borderWidth: 2,
+        tension: 0,
+      },
+      point: {
+        radius: 4,
+        hoverRadius: 5,
+      },
+    },
     plugins: {
       legend: {
         display: false,
@@ -41,16 +53,29 @@ export default function CareerMatrixPanel({ careerMatrix, status }) {
     },
     scales: {
       r: {
+        alignToPixels: true,
         suggestedMin: 0,
         suggestedMax: 100,
+        angleLines: {
+          color: "rgba(100, 116, 139, 0.25)",
+        },
+        grid: {
+          color: "rgba(100, 116, 139, 0.22)",
+        },
         ticks: {
           stepSize: 25,
           backdropColor: "transparent",
+          color: "#64748b",
+          font: {
+            size: 11,
+            weight: "600",
+          },
         },
         pointLabels: {
+          color: "#475569",
           font: {
-            size: 12,
-            weight: "bold",
+            size: 13,
+            weight: "700",
           },
         },
       },
