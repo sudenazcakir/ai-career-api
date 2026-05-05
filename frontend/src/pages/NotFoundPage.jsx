@@ -18,7 +18,7 @@ export default function NotFoundPage({ isAuthenticated = false, variant = "publi
       )}
       <p className="mt-3 max-w-2xl break-words text-sm font-semibold leading-6 text-slate-500">
         This page does not exist or the link may have changed. Go back to your
-        career workspace or sign in to continue.
+        career workspace{isAuthenticated ? "." : " or sign in to continue."}
       </p>
       <div className="mt-5 flex flex-wrap gap-2.5">
         <Link className={`${ui.button} inline-flex items-center justify-center`} to="/dashboard">

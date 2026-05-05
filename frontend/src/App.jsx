@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import {
   defaultMatch,
   emptyPassport,
@@ -140,21 +140,27 @@ export default function App() {
     : redirectPath;
   const currentAuthMode = location.pathname === "/login" ? "login" : "register";
 
+  const activeTransitionRef = useRef(false);
+
   function smoothNavigate(to, options) {
     const currentPath = `${location.pathname}${location.search}`;
     if (to === currentPath || to === location.pathname) return;
 
     if (!shouldUseViewTransition()) {
+      const el = document.documentElement;
+      el.classList.add("use-css-fallback");
       navigate(to, options);
+      setTimeout(() => el.classList.remove("use-css-fallback"), 320);
       return;
     }
 
-    document.documentElement.classList.add("view-transition-running");
+    if (activeTransitionRef.current) return;
+    activeTransitionRef.current = true;
     const transition = document.startViewTransition(() => {
       flushSync(() => navigate(to, options));
     });
     transition.finished.finally(() => {
-      document.documentElement.classList.remove("view-transition-running");
+      activeTransitionRef.current = false;
     });
   }
 

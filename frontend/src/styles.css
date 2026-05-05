@@ -61,13 +61,13 @@ canvas {
 }
 
 .route-transition {
-  animation: route-fade-slide 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
   contain: layout;
   view-transition-name: route-content;
 }
 
-html.view-transition-running .route-transition {
-  animation: none;
+/* CSS fallback animation — applied only when the View Transitions API is unavailable */
+html.use-css-fallback .route-transition {
+  animation: route-fade-slide 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes route-fade-slide {
@@ -110,7 +110,7 @@ html.view-transition-running .route-transition {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .route-transition {
+  html.use-css-fallback .route-transition {
     animation: none;
   }
 
