@@ -95,7 +95,7 @@ router.get("/best-cv/:jobId", async (req, res) => {
     const cvs = await CV.find({ owner: req.user._id });
 
     let bestCv = null;
-    let bestScore = 0;
+    let bestScore = -1;
     const jobSkills = job.skills || [];
 
     cvs.forEach((cv) => {
@@ -111,7 +111,7 @@ router.get("/best-cv/:jobId", async (req, res) => {
       }
     });
 
-    res.json({ bestCv, score: bestScore });
+    res.json({ bestCv, score: Math.max(bestScore, 0) });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

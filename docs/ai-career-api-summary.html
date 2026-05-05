@@ -57,7 +57,7 @@
       <li>Adzuna API'den gercek is ilanlari cekilebiliyor.</li>
       <li>Cekilen is ilanlari MongoDB'ye kaydediliyor.</li>
       <li>Duplicate kontrolu <code>title + company</code> uzerinden yapiliyor.</li>
-      <li><code>models/Job.js</code> ile Job modeli olusturuldu.</li>
+      <li><code>backend/models/Job.js</code> ile Job modeli olusturuldu.</li>
       <li><code>GET /api/jobs/fetch</code> endpoint'i eklendi.</li>
       <li><code>GET /api/jobs/filter</code> endpoint'i eklendi.</li>
       <li><code>POST /api/jobs/import-adzuna</code> endpoint'i eklendi.</li>
@@ -67,7 +67,7 @@
 
     <h2>3. CV Ozellikleri</h2>
     <ul>
-      <li><code>models/CV.js</code> ile CV modeli olusturuldu.</li>
+      <li><code>backend/models/CV.js</code> ile CV modeli olusturuldu.</li>
       <li><code>POST /api/cvs</code> ile CV olusturulabiliyor.</li>
       <li><code>GET /api/cvs</code> ile login olan kullanicinin CV listesi alinabiliyor.</li>
       <li><code>PUT /api/cvs/:id</code> ile CV guncellenebiliyor.</li>
@@ -122,7 +122,7 @@
 
     <h2>9. Skill Extractor Servisi</h2>
     <ul>
-      <li><code>services/skillExtractor.js</code> olusturuldu.</li>
+      <li><code>backend/services/skillExtractor.js</code> olusturuldu.</li>
       <li>Job description icinden skill yakalama yapiliyor.</li>
       <li>Desteklenen ornek skill'ler: Java, SQL, React, Node, Docker, Python.</li>
     </ul>

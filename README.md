@@ -4,12 +4,30 @@ AI Career API, AI-assisted career matching demo uygulamasidir. Backend tarafinda
 
 ## Project Layout
 
-- Backend: `server.js`
-- Frontend: `client/`
+- Backend: `backend/`
+- Frontend: `frontend/`
 - Reference docs: `docs/`
 - API base URL: `http://localhost:5001/api`
 - Swagger UI: `http://localhost:5001/api-docs`
 - Frontend URL: `http://localhost:5173`
+
+```text
+ai-career-api/
+  backend/
+    config/
+    controllers/
+    middleware/
+    models/
+    routes/
+    scripts/
+    services/
+    server.js
+  frontend/
+    src/
+    index.html
+  docs/
+  package.json
+```
 
 ## Features
 
@@ -20,7 +38,7 @@ AI Career API, AI-assisted career matching demo uygulamasidir. Backend tarafinda
 - CV tabanli recommendations
 - Match score ve missing skills analizi
 - Best CV for job akisi
-- Analytics placeholder endpointleri
+- Analytics ve Career Matrix endpointleri
 - JWT tabanli register/login akisi
 - Kullanici profili ve Career Passport verilerinin MongoDB'de tutulmasi
 - Chart.js ile analytics gorsellestirme
@@ -61,6 +79,19 @@ mongodb+srv://<username>:<password>@cluster0.example.mongodb.net/ai-career-api?r
 
 ## Local Development
 
+Tum dev komutlari proje root klasorunden calistirilir:
+
+```powershell
+cd ai-career-api
+```
+
+Klasor yapisi degisti ama komut calistirma modeli ayni kaldi:
+
+- Backend kodlari `backend/` altindadir, ancak server root'tan `npm run server` ile baslatilir.
+- Frontend kodlari `frontend/` altindadir, ancak Vite root'tan `npm run client` ile baslatilir.
+- DB scriptleri `backend/scripts/` altindadir, ancak root'tan `npm run check:db` ve `npm run seed:demo` ile calistirilir.
+- Normal dev akista `cd backend` veya `cd frontend` yapmaniz gerekmez.
+
 Isterseniz once MongoDB baglantisini test edin:
 
 ```powershell
@@ -100,13 +131,13 @@ Ne zaman kullanilmamali:
 - Kendi test verinizi elle olusturuyorsaniz
 - Demo verinin mevcut veriyi etkilemesini istemiyorsaniz
 
-Calisma sirasi olarak onerilen akıs:
+Calisma sirasi olarak onerilen akis:
 
 1. `.env` hazirla
 2. Gerekirse `npm run check:db`
 3. Ihtiyac varsa `npm run seed:demo`
 4. `npm run server`
-5. Ayrı terminalde `npm run client`
+5. Ayri terminalde `npm run client`
 
 Iki terminal acin.
 
@@ -117,12 +148,16 @@ cd ai-career-api
 npm run server
 ```
 
+Bu komut arkada `node backend/server.js` calistirir.
+
 Frontend:
 
 ```powershell
 cd ai-career-api
 npm run client
 ```
+
+Bu komut Vite'i `frontend/` root'u ile calistirir.
 
 ## Useful Commands
 
@@ -132,6 +167,13 @@ npm run seed:demo
 npm run server
 npm run client
 ```
+
+Scriptlerin arka planda calistirdigi dosyalar:
+
+- `npm run server` -> `backend/server.js`
+- `npm run client` -> `frontend/` Vite app
+- `npm run check:db` -> `backend/scripts/checkDb.js`
+- `npm run seed:demo` -> `backend/scripts/seedDemo.js`
 
 ## Available API Surface
 
@@ -162,6 +204,7 @@ Protected with `Authorization: Bearer <token>`:
 - `GET /api/recommendations?cvId=...`
 - `GET /api/analytics/skills`
 - `GET /api/analytics/trends`
+- `POST /api/career-matrix`
 
 ## Notes
 

@@ -53,8 +53,8 @@ export default function App() {
   const [filterForm, setFilterForm] = useState({
     keyword: "developer",
     skill: "Java",
-    minMatch: "50",
-    sort: "score",
+    minMatch: "",
+    sort: "newest",
   });
   const [matchForm, setMatchForm] = useState(defaultMatch);
   const [jobs, setJobs] = useState([]);
@@ -239,13 +239,26 @@ export default function App() {
   function fetchJobs() {
     runAction("Fetching jobs from Adzuna", async () => {
       const data = await fetchJobsFromAdzuna();
-      setStatus(data.message || "Jobs fetched and saved");
+      const params = new URLSearchParams({ sort: "newest" });
+      const loadedJobs = await filterJobsByQuery(params);
+      setJobs(loadedJobs.data || []);
+      setStatus(
+        `Jobs imported: ${data.imported || 0} new, ${data.updated || 0} updated. ${loadedJobs.data?.length || 0} jobs loaded.`
+      );
     });
   }
 
   function filterJobs(event) {
     event?.preventDefault();
     runAction("Filtering jobs from database", async () => {
+      const needsCvContext =
+        Boolean(filterForm.minMatch) || filterForm.sort === "score";
+
+      if (needsCvContext && !selectedCvId) {
+        setStatus("Select or create a CV before using match score filters.");
+        return;
+      }
+
       const params = new URLSearchParams();
       Object.entries(filterForm).forEach(([key, value]) => {
         if (value) params.set(key, value);
