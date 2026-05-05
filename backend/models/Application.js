@@ -2,11 +2,10 @@ const mongoose = require("mongoose");
 
 const applicationSchema = new mongoose.Schema(
   {
-    userEmail: {
-      type: String,
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
-      trim: true,
-      lowercase: true,
     },
     job: {
       type: mongoose.Schema.Types.ObjectId,
@@ -35,6 +34,6 @@ const applicationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-applicationSchema.index({ userEmail: 1, job: 1 }, { unique: true });
+applicationSchema.index({ owner: 1, job: 1 }, { unique: true });
 
 module.exports = mongoose.model("Application", applicationSchema);

@@ -12,12 +12,7 @@ function ensureDbConnected(res) {
     res.status(503).json({ error: "Database is not connected" });
     return false;
   }
-
   return true;
-}
-
-function normalizeEmail(email = "") {
-  return email.trim().toLowerCase();
 }
 
 function isValidObjectId(id) {
@@ -28,14 +23,10 @@ function isValidObjectId(id) {
  * @swagger
  * /applications:
  *   get:
- *     summary: List tracked applications for a user
+ *     summary: List the authenticated user's applications
  *     tags: [Applications]
- *     parameters:
- *       - in: query
- *         name: userEmail
- *         required: true
- *         schema:
- *           type: string
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Application list
@@ -44,12 +35,7 @@ router.get("/applications", async (req, res) => {
   try {
     if (!ensureDbConnected(res)) return;
 
-    const userEmail = normalizeEmail(req.query.userEmail || "");
-    if (!userEmail) {
-      return res.status(400).json({ error: "userEmail is required" });
-    }
-
-    const applications = await Application.find({ userEmail })
+    const applications = await Application.find({ owner: req.user._id })
       .populate("job")
       .populate("cv")
       .sort({ updatedAt: -1 });
@@ -66,6 +52,8 @@ router.get("/applications", async (req, res) => {
  *   post:
  *     summary: Track or save a job application
  *     tags: [Applications]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       201:
  *         description: Created application
@@ -74,11 +62,10 @@ router.post("/applications", async (req, res) => {
   try {
     if (!ensureDbConnected(res)) return;
 
-    const userEmail = normalizeEmail(req.body.userEmail || "");
     const { jobId, cvId, notes = "", status = "Under Review" } = req.body;
 
-    if (!userEmail || !jobId || !cvId) {
-      return res.status(400).json({ error: "userEmail, jobId and cvId are required" });
+    if (!jobId || !cvId) {
+      return res.status(400).json({ error: "jobId and cvId are required" });
     }
     if (!isValidObjectId(jobId) || !isValidObjectId(cvId)) {
       return res.status(400).json({ error: "Invalid jobId or cvId" });
@@ -87,34 +74,31 @@ router.post("/applications", async (req, res) => {
       return res.status(400).json({ error: "Invalid application status" });
     }
 
-    const [job, cv] = await Promise.all([Job.findById(jobId), CV.findById(cvId)]);
+    const [job, cv] = await Promise.all([
+      Job.findById(jobId),
+      CV.findOne({ _id: cvId, owner: req.user._id }),
+    ]);
     if (!job) return res.status(404).json({ error: "Job not found" });
     if (!cv) return res.status(404).json({ error: "CV not found" });
 
-    const existing = await Application.findOne({ userEmail, job: jobId });
+    const existing = await Application.findOne({ owner: req.user._id, job: jobId });
     if (existing) {
       existing.cv = cvId;
       existing.notes = notes;
       existing.status = status;
       await existing.save();
-
       const populated = await existing.populate(["job", "cv"]);
-      return res.status(200).json({
-        success: true,
-        data: populated,
-        message: "Application updated",
-      });
+      return res.status(200).json({ success: true, data: populated, message: "Application updated" });
     }
 
     const application = await Application.create({
-      userEmail,
+      owner: req.user._id,
       job: jobId,
       cv: cvId,
       notes,
       status,
     });
     const populated = await application.populate(["job", "cv"]);
-
     res.status(201).json({ success: true, data: populated });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -127,6 +111,8 @@ router.post("/applications", async (req, res) => {
  *   patch:
  *     summary: Update application status
  *     tags: [Applications]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Updated application
@@ -145,8 +131,8 @@ router.patch("/applications/:id/status", async (req, res) => {
       return res.status(400).json({ error: "Invalid application status" });
     }
 
-    const application = await Application.findByIdAndUpdate(
-      id,
+    const application = await Application.findOneAndUpdate(
+      { _id: id, owner: req.user._id },
       { status },
       { new: true }
     )

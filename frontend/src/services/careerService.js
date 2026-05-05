@@ -55,3 +55,21 @@ export function getCareerMatrix(passport) {
     body: JSON.stringify({ passport }),
   });
 }
+
+export function listApplications() {
+  return apiRequest("/api/applications");
+}
+
+export function trackApplication(payload) {
+  return apiRequest("/api/applications", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateApplicationStatus(id, status) {
+  return apiRequest(`/api/applications/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}

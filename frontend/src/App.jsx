@@ -6,13 +6,17 @@ import {
   pages,
 } from "./constants/appData";
 import AccountPage from "./pages/AccountPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
+import ApplicationsPage from "./pages/ApplicationsPage";
 import AuthPage from "./pages/AuthPage";
 import CvPage from "./pages/CvPage";
 import InsightsPage from "./pages/InsightsPage";
 import JobsPage from "./pages/JobsPage";
 import OverviewPage from "./pages/OverviewPage";
 import PassportOnboarding from "./pages/PassportOnboarding";
-import { getBackendOrigin } from "./services/api";
+import RoadmapPage from "./pages/RoadmapPage";
+import SkillGapPage from "./pages/SkillGapPage";
+import { getBackendOrigin, setUnauthorizedHandler } from "./services/api";
 import {
   getCurrentUser,
   loginUser,
@@ -30,7 +34,10 @@ import {
   getRecommendations,
   getSkillAnalytics,
   getTrendAnalytics,
+  listApplications,
   listCvs,
+  trackApplication,
+  updateApplicationStatus,
 } from "./services/careerService";
 import { ui } from "./styles/ui";
 import { firstError, splitSkills, validateAuthForm } from "./utils/validation";
@@ -64,6 +71,7 @@ export default function App() {
   const [bestCvResult, setBestCvResult] = useState(null);
   const [skillAnalytics, setSkillAnalytics] = useState(null);
   const [trendAnalytics, setTrendAnalytics] = useState(null);
+  const [applications, setApplications] = useState([]);
   const [pendingAction, setPendingAction] = useState("");
 
   const selectedCv = useMemo(
@@ -78,10 +86,27 @@ export default function App() {
     const data = await listCvs();
     const nextCvs = data.data || [];
     setCvs(nextCvs);
+    if (!selectedCvId && nextCvs[0]?._id) setSelectedCvId(nextCvs[0]._id);
+  }
 
-    if (!selectedCvId && nextCvs[0]?._id) {
-      setSelectedCvId(nextCvs[0]._id);
-    }
+  async function loadApplications() {
+    const data = await listApplications();
+    setApplications(data.data || []);
+  }
+
+  function handleTrackApplication(jobId, cvId, status = "Under Review") {
+    if (!cvId) { setStatus("Select a CV first"); return; }
+    runAction(status === "Saved for Later" ? "Saving for later" : "Tracking application", async () => {
+      await trackApplication({ jobId, cvId, status });
+      await loadApplications();
+    });
+  }
+
+  function handleUpdateApplicationStatus(id, status) {
+    runAction("Updating status", async () => {
+      await updateApplicationStatus(id, status);
+      await loadApplications();
+    });
   }
 
   function applyAuthSession(data) {
@@ -109,7 +134,8 @@ export default function App() {
 
   useEffect(() => {
     if (user) {
-      loadCvs().catch((error) => setStatus(error.message));
+      loadCvs().catch((e) => setStatus(e.message));
+      loadApplications().catch((e) => setStatus(e.message));
     }
   }, [user]);
 
@@ -202,20 +228,22 @@ export default function App() {
     setStatus("Signed out");
   }
 
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      localStorage.removeItem("authToken");
+      setUser(null);
+      setShowOnboarding(false);
+      setStatus("Session expired. Please sign in again.");
+    });
+  }, []);
+
   async function runAction(label, action) {
     try {
       setPendingAction(label);
       setStatus(label);
       await action();
     } catch (error) {
-      if (error.status === 401) {
-        localStorage.removeItem("authToken");
-        setUser(null);
-        setShowOnboarding(false);
-        setStatus("Session expired. Please sign in again.");
-        return;
-      }
-
+      if (error.status === 401) return; // handler already fired via setUnauthorizedHandler
       setStatus(error.message);
     } finally {
       setPendingAction("");
@@ -374,13 +402,24 @@ export default function App() {
         </div>
 
         <nav className={ui.nav}>
-          {pages.map((page) => (
-            <button
-              className={`${ui.navButton} ${activePage === page.id ? ui.navButtonActive : ""}`}
-              key={page.id}
-              onClick={() => setActivePage(page.id)}
-              type="button"
-            >
+          <p className="px-3 pt-3 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Workspace</p>
+          {pages.filter((p) => p.section === "workspace").map((page) => (
+            <button className={`${ui.navButton} ${activePage === page.id ? ui.navButtonActive : ""}`}
+              key={page.id} onClick={() => setActivePage(page.id)} type="button">
+              {page.label}
+            </button>
+          ))}
+          <p className="px-3 pt-4 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Growth</p>
+          {pages.filter((p) => p.section === "growth").map((page) => (
+            <button className={`${ui.navButton} ${activePage === page.id ? ui.navButtonActive : ""}`}
+              key={page.id} onClick={() => setActivePage(page.id)} type="button">
+              {page.label}
+            </button>
+          ))}
+          <p className="px-3 pt-4 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Applications</p>
+          {pages.filter((p) => p.section === "apply").map((page) => (
+            <button className={`${ui.navButton} ${activePage === page.id ? ui.navButtonActive : ""}`}
+              key={page.id} onClick={() => setActivePage(page.id)} type="button">
               {page.label}
             </button>
           ))}
@@ -473,6 +512,47 @@ export default function App() {
             trendAnalytics={trendAnalytics}
             loadAnalytics={loadAnalytics}
             isBusy={isBusy}
+          />
+        )}
+
+        {activePage === "skillgap" && (
+          <SkillGapPage
+            jobs={jobs}
+            recommendations={recommendations}
+            selectedCv={selectedCv}
+            setActivePage={setActivePage}
+          />
+        )}
+
+        {activePage === "roadmap" && (
+          <RoadmapPage
+            jobs={jobs}
+            recommendations={recommendations}
+            selectedCv={selectedCv}
+            analyzeGaps={analyzeGaps}
+            analysisResult={analysisResult}
+            matchResult={matchResult}
+          />
+        )}
+
+        {activePage === "applications" && (
+          <ApplicationsPage
+            applications={applications}
+            selectedCvId={selectedCvId}
+            trackApplication={handleTrackApplication}
+            updateApplicationStatus={handleUpdateApplicationStatus}
+            setActivePage={setActivePage}
+          />
+        )}
+
+        {activePage === "analytics" && (
+          <AnalyticsPage
+            applications={applications}
+            jobs={jobs}
+            recommendations={recommendations}
+            skillAnalytics={skillAnalytics}
+            trendAnalytics={trendAnalytics}
+            loadAnalytics={loadAnalytics}
           />
         )}
 

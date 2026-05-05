@@ -1,18 +1,25 @@
+let _unauthorizedHandler = null;
+
+export function setUnauthorizedHandler(fn) {
+  _unauthorizedHandler = fn;
+}
+
 export async function apiRequest(path, options = {}) {
   const token = localStorage.getItem("authToken");
   const response = await fetch(path, {
+    ...options,
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
-    ...options,
   });
 
   const data = await response.json();
 
   if (!response.ok) {
     if (response.status === 401) {
+      _unauthorizedHandler?.();
       const error = new Error(data.error || "Session expired. Please sign in again.");
       error.status = 401;
       throw error;
