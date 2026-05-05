@@ -72,7 +72,7 @@ export default function AnalyticsPage({
                     <div
                       className="skill-freq-bar"
                       style={{
-                        width: `${Math.min(100, item.share || item.missingCount || 0)}%`,
+                        width: `${Math.min(100, item.share ?? 0)}%`,
                       }}
                     />
                   </div>
