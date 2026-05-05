@@ -55,6 +55,13 @@ export function calculateFullMatch({ cvId, jobId }) {
   });
 }
 
+export function getSuccessScore({ cvId, jobId }) {
+  return apiRequest("/api/success-score", {
+    method: "POST",
+    body: JSON.stringify({ cvId, jobId }),
+  });
+}
+
 export function buildRoadmap(payload) {
   return apiRequest("/api/analysis", {
     method: "POST",

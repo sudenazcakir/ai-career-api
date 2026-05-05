@@ -43,6 +43,7 @@ import {
   fetchJobsFromAdzuna,
   filterJobsByQuery,
   getBestCv,
+  getSuccessScore,
   getRecommendations,
   getSkillAnalytics,
   getTrendAnalytics,
@@ -126,6 +127,7 @@ export default function App() {
   const [matchResult, setMatchResult] = useState(null);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [bestCvResult, setBestCvResult] = useState(null);
+  const [successScore, setSuccessScore] = useState(null);
   const [skillAnalytics, setSkillAnalytics] = useState(null);
   const [trendAnalytics, setTrendAnalytics] = useState(null);
   const [applications, setApplications] = useState([]);
@@ -487,6 +489,18 @@ export default function App() {
     });
   }
 
+  function calculateSuccessScore() {
+    if (!selectedCvId || !bestJobId) {
+      setStatus("Select a CV and load jobs or recommendations first");
+      return;
+    }
+    runAction("Calculating success score", async () => {
+      const data = await getSuccessScore({ cvId: selectedCvId, jobId: bestJobId });
+      setSuccessScore(data);
+      setStatus("Success score ready");
+    });
+  }
+
   function runMatch(event) {
     event.preventDefault();
     runAction("Calculating match explainability", async () => {
@@ -809,6 +823,8 @@ export default function App() {
                   skillAnalytics={skillAnalytics}
                   trendAnalytics={trendAnalytics}
                   loadAnalytics={loadAnalytics}
+                  successScore={successScore}
+                  calculateSuccessScore={calculateSuccessScore}
                   isBusy={isBusy}
                 />
               }

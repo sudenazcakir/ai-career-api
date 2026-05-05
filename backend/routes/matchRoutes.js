@@ -97,4 +97,94 @@ router.get("/best-cv/:jobId", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /success-score:
+ *   post:
+ *     summary: Predict interview potential for a CV + Job pair
+ *     tags: [Match]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               cvId:
+ *                 type: string
+ *               jobId:
+ *                 type: string
+ */
+router.post("/success-score", async (req, res) => {
+  try {
+    const { cvId, jobId } = req.body;
+
+    if (!cvId || !jobId) {
+      return res.status(400).json({ error: "cvId and jobId are required" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(cvId) || !mongoose.Types.ObjectId.isValid(jobId)) {
+      return res.status(400).json({ error: "Invalid cvId or jobId" });
+    }
+
+    const [cv, job] = await Promise.all([
+      CV.findOne({ _id: cvId, owner: req.user._id }),
+      Job.findById(jobId),
+    ]);
+
+    if (!cv)  return res.status(404).json({ error: "CV not found" });
+    if (!job) return res.status(404).json({ error: "Job not found" });
+
+    const match = scoreMatch({ cv, job });
+
+    // CV completeness: key fields filled
+    const completenessFields = [
+      cv.summary, cv.skills?.length, cv.experience?.length,
+      cv.projects?.length, cv.certifications?.length,
+    ];
+    const filled = completenessFields.filter(Boolean).length;
+    const cvCompleteness = Math.round((filled / completenessFields.length) * 100);
+
+    // Adjustments
+    const skillGapPenalty  = Math.min(match.missingSkills.length * 4, 20);
+    const completenessBonus = Math.round(cvCompleteness * 0.12); // max +12
+    const expBonus = Math.min((cv.experience || []).length * 5, 15); // max +15
+
+    const raw = match.matchScore - skillGapPenalty + completenessBonus + expBonus;
+    const successScore = Math.max(0, Math.min(100, Math.round(raw)));
+
+    const interviewPotential =
+      successScore >= 72 ? "High" :
+      successScore >= 48 ? "Medium" : "Low";
+
+    // Actionable suggestions
+    const suggestions = [];
+    if (!cv.summary) suggestions.push("Add a CV summary to strengthen your profile (+5 pts potential)");
+    if (!(cv.experience || []).length) suggestions.push("Add experience entries for better job description alignment (+10 pts potential)");
+    if (!(cv.projects || []).length) suggestions.push("List projects to demonstrate practical skills (+5 pts potential)");
+    if (match.missingSkills.length > 0) {
+      suggestions.push(`Close top skill gaps: ${match.missingSkills.slice(0, 3).join(", ")} (-${Math.min(match.missingSkills.length * 4, 20)} pts penalty removed)`);
+    }
+    if (cvCompleteness < 80) suggestions.push(`Complete your CV profile — currently ${cvCompleteness}% filled`);
+
+    res.json({
+      successScore,
+      interviewPotential,
+      matchScore:          match.matchScore,
+      skillGapCount:       match.missingSkills.length,
+      experienceAlignment: match.breakdown.experienceScore,
+      cvCompleteness,
+      breakdown: {
+        base:               match.matchScore,
+        skillGapPenalty:    -skillGapPenalty,
+        completenessBonus,
+        experienceBonus:    expBonus,
+      },
+      suggestions,
+      summary: `${interviewPotential} interview potential — ${match.explanation}`,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

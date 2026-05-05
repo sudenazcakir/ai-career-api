@@ -11,6 +11,7 @@ export default function InsightsPage({
   analysisResult,
   analyzeGaps,
   bestCvResult,
+  calculateSuccessScore,
   findBestCv,
   isBusy,
   loadAnalytics,
@@ -20,6 +21,7 @@ export default function InsightsPage({
   runMatch,
   setMatchForm,
   skillAnalytics,
+  successScore,
   trendAnalytics,
 }) {
   return (
@@ -99,6 +101,95 @@ export default function InsightsPage({
           <span className={ui.count}>{recommendations.length} ranked jobs</span>
         </div>
         {bestCvResult ? <BestCvResult result={bestCvResult} /> : <Empty />}
+      </section>
+
+      {/* ── Application Success Score ─────────────────────────────── */}
+      <section className={`${ui.panel} ${ui.full}`}>
+        <div className={ui.sectionHead}>
+          <div>
+            <p className={ui.eyebrow}>Interview predictor</p>
+            <h2 className="text-2xl font-black">Application success score</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Combines match score, skill gap count, experience depth and CV completeness.
+              Uses your selected CV against the top ranked job.
+            </p>
+          </div>
+          <button
+            className={ui.button}
+            disabled={isBusy}
+            type="button"
+            onClick={calculateSuccessScore}
+          >
+            {isBusy ? "Calculating…" : "Calculate score"}
+          </button>
+        </div>
+
+        {successScore ? (
+          <div className="grid gap-4">
+            {/* Headline badge */}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className={`rounded-full px-4 py-1.5 text-sm font-black ${
+                successScore.interviewPotential === "High"   ? "bg-teal-100 text-teal-800"  :
+                successScore.interviewPotential === "Medium" ? "bg-amber-100 text-amber-800" :
+                                                               "bg-red-100 text-red-700"
+              }`}>
+                {successScore.interviewPotential} interview potential
+              </span>
+              <span className="text-sm font-semibold text-slate-600">{successScore.summary}</span>
+            </div>
+
+            {/* Key metrics */}
+            <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2">
+              {[
+                { label: "Success score",        value: `${successScore.successScore}%` },
+                { label: "Match score",           value: `${successScore.matchScore}%` },
+                { label: "Skill gaps",            value: successScore.skillGapCount },
+                { label: "Experience alignment",  value: `${successScore.experienceAlignment}%` },
+              ].map(({ label, value }) => (
+                <div key={label} className={ui.metric}>
+                  <span className={ui.metricLabel}>{label}</span>
+                  <strong className="text-2xl font-black leading-none">{value}</strong>
+                </div>
+              ))}
+            </div>
+
+            {/* Score breakdown */}
+            {successScore.breakdown && (
+              <div className="rounded-xl border border-[#d6dee2] bg-[#f8fafc] p-3">
+                <p className={ui.miniLabel}>Score calculation</p>
+                <div className="grid gap-1 font-mono text-xs text-slate-600">
+                  <span>Base (match score):        +{successScore.breakdown.base}</span>
+                  <span>Skill gap penalty:          {successScore.breakdown.skillGapPenalty}</span>
+                  <span>CV completeness bonus:      +{successScore.breakdown.completenessBonus}</span>
+                  <span>Experience depth bonus:     +{successScore.breakdown.experienceBonus}</span>
+                  <span className="mt-1 border-t border-[#d6dee2] pt-1 font-black text-slate-800">
+                    = {successScore.successScore}% success score
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Suggestions */}
+            {successScore.suggestions?.length > 0 && (
+              <div>
+                <p className={ui.miniLabel}>How to improve</p>
+                <ul className="grid gap-2">
+                  {successScore.suggestions.map((s) => (
+                    <li
+                      key={s}
+                      className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900"
+                    >
+                      <span className="mt-0.5 shrink-0">→</span>
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        ) : (
+          <Empty />
+        )}
       </section>
 
       <section className={ui.panel}>
