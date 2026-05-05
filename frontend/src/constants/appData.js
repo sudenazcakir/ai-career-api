@@ -1,13 +1,13 @@
 export const pages = [
-  { id: "overview",     label: "Dashboard",   section: "workspace" },
-  { id: "jobs",         label: "Jobs",         section: "workspace" },
-  { id: "cv",           label: "My CVs",       section: "workspace" },
-  { id: "skillgap",     label: "Skill Gaps",   section: "growth" },
-  { id: "roadmap",      label: "Roadmap",      section: "growth" },
-  { id: "applications", label: "Applications", section: "apply" },
-  { id: "analytics",    label: "Trends",       section: "apply" },
-  { id: "insights",     label: "AI Insights",  section: "apply" },
-  { id: "account",      label: "Profile",      section: "apply" },
+  { id: "overview",     label: "Dashboard",   section: "workspace", path: "/dashboard" },
+  { id: "jobs",         label: "Jobs",         section: "workspace", path: "/jobs" },
+  { id: "cv",           label: "My CVs",       section: "workspace", path: "/cvs" },
+  { id: "skillgap",     label: "Skill Gaps",   section: "growth",    path: "/skill-gaps" },
+  { id: "roadmap",      label: "Roadmap",      section: "growth",    path: "/roadmap" },
+  { id: "applications", label: "Applications", section: "apply",     path: "/applications" },
+  { id: "analytics",    label: "Trends",       section: "apply",     path: "/trends" },
+  { id: "insights",     label: "AI Insights",  section: "apply",     path: "/insights" },
+  { id: "account",      label: "Profile",      section: "apply",     path: "/profile" },
 ];
 
 export const defaultMatch = {

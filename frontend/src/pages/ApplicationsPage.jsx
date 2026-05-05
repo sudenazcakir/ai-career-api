@@ -2,11 +2,11 @@ import { JobList, Empty } from "../components/shared";
 
 export default function ApplicationsPage({
   applications,
-  applicationStatuses,
+  applicationStatuses = ["Saved for Later", "Under Review", "Accepted", "Rejected"],
   setActivePage,
   updateApplicationStatus,
-  similarApplications,
-  loadSimilarApplications,
+  similarApplications = [],
+  loadSimilarApplications = null,
 }) {
   const columns = applicationStatuses.map((status) => ({
     status,
@@ -76,7 +76,12 @@ export default function ApplicationsPage({
               Roles similar to what you've applied for before.
             </p>
           </div>
-          <button type="button" className="secondary" onClick={loadSimilarApplications}>
+          <button
+            type="button"
+            className="secondary"
+            onClick={loadSimilarApplications ?? undefined}
+            disabled={!loadSimilarApplications}
+          >
             Find Similar Roles
           </button>
         </div>
