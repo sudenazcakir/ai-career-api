@@ -5,41 +5,46 @@ export function splitSkills(value) {
     .filter(Boolean);
 }
 
+export function splitLines(value) {
+  return value
+    .split(/\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 export function normalizePhoneNumber(value) {
-  return value.replace(/\D/g, "").slice(0, 10);
+  return String(value || "").replace(/\D/g, "").slice(0, 10);
 }
 
 export function validatePhoneNumber(value) {
-  if (/[^0-9]/.test(value)) {
-    return "Telefon numarasi sadece rakamlardan olusmalidir.";
+  const normalized = normalizePhoneNumber(value);
+
+  if (normalized.startsWith("0")) {
+    return "Phone number must be 10 digits and must not start with 0.";
   }
 
-  if (value.startsWith("0")) {
-    return "Telefon numarasi basinda 0 olmadan 10 haneli olmalidir.";
-  }
-
-  if (value.length !== 10) {
-    return "Telefon numarasi 10 haneli olmalidir.";
+  if (normalized.length !== 10) {
+    return "Phone number must be exactly 10 digits.";
   }
 
   return "";
 }
 
 export function validatePassword(value) {
-  if (value.length < 8) return "Sifre en az 8 karakter olmalidir.";
-  if (!/[A-Z]/.test(value)) return "Sifre en az bir buyuk harf icermelidir.";
-  if (!/[a-z]/.test(value)) return "Sifre en az bir kucuk harf icermelidir.";
-  if (!/[0-9]/.test(value)) return "Sifre en az bir rakam icermelidir.";
-  if (!/[.!@#$%^&*\-_]/.test(value)) {
-    return "Sifre en az bir ozel karakter icermelidir.";
+  if (value.length < 8) return "Password must be at least 8 characters.";
+  if (!/[A-Z]/.test(value)) return "Password must include at least one uppercase letter.";
+  if (!/[a-z]/.test(value)) return "Password must include at least one lowercase letter.";
+  if (!/[0-9]/.test(value)) return "Password must include at least one number.";
+  if (!/[^\w\s]/.test(value)) {
+    return "Password must include at least one special character.";
   }
   return "";
 }
 
 export function validateEmail(value) {
-  if (!value.trim()) return "Email zorunludur.";
+  if (!value.trim()) return "Email is required.";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-    return "Gecerli bir email adresi giriniz.";
+    return "Email format is invalid.";
   }
   return "";
 }
@@ -51,21 +56,21 @@ export function validateAuthForm(form, mode) {
   if (emailError) errors.email = emailError;
 
   if (!form.password) {
-    errors.password = "Sifre zorunludur.";
+    errors.password = "Password is required.";
   } else if (mode === "register") {
     const passwordError = validatePassword(form.password);
     if (passwordError) errors.password = passwordError;
   }
 
   if (mode === "register") {
-    if (!form.firstName.trim()) errors.firstName = "First name zorunludur.";
-    if (!form.lastName.trim()) errors.lastName = "Last name zorunludur.";
+    if (!form.firstName.trim()) errors.firstName = "First name is required.";
+    if (!form.lastName.trim()) errors.lastName = "Last name is required.";
 
-    const phoneError = validatePhoneNumber(form.phoneNumber);
+    const phoneError = validatePhoneNumber(normalizePhoneNumber(form.phoneNumber));
     if (phoneError) errors.phone = phoneError;
 
     if (form.password !== form.confirmPassword) {
-      errors.confirmPassword = "Sifreler eslesmiyor.";
+      errors.confirmPassword = "Passwords do not match.";
     }
   }
 
@@ -74,4 +79,56 @@ export function validateAuthForm(form, mode) {
 
 export function firstError(errors) {
   return Object.values(errors)[0] || "";
+}
+
+export function friendlyErrorMessage(message) {
+  if (!message) return "Something went wrong.";
+
+  const normalized = String(message).toLowerCase();
+  if (normalized.includes("expected pattern")) {
+    return "The server rejected one field format. Please check email and phone number.";
+  }
+
+  if (normalized.includes("email is already registered")) {
+    return "This email address is already registered.";
+  }
+
+  if (normalized.includes("invalid email or password")) {
+    return "Email or password is incorrect.";
+  }
+
+  if (normalized.includes("database is not connected")) {
+    return "Database is not connected. Please check the backend.";
+  }
+
+  return message;
+}
+
+export function inferExpectedPatternError(form) {
+  const namePattern = /^[A-Za-z][A-Za-z\s'-]*$/;
+
+  if (form.firstName && !namePattern.test(form.firstName.trim())) {
+    return {
+      firstName: "First name contains unsupported characters. Use English letters only.",
+    };
+  }
+
+  if (form.lastName && !namePattern.test(form.lastName.trim())) {
+    return {
+      lastName: "Last name contains unsupported characters. Use English letters only.",
+    };
+  }
+
+  const emailError = validateEmail(form.email || "");
+  if (emailError) return { email: emailError };
+
+  const phoneError = validatePhoneNumber(form.phoneNumber || "");
+  if (phoneError) return { phone: phoneError };
+
+  const passwordError = validatePassword(form.password || "");
+  if (passwordError) return { password: passwordError };
+
+  return {
+    form: "The server rejected a field format, but did not say which field.",
+  };
 }

@@ -11,6 +11,20 @@ export function createCvProfile(payload) {
   });
 }
 
+export function createCvVersion(cvId, payload = {}) {
+  return apiRequest(`/api/cvs/${cvId}/version`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function compareCvProfiles(leftCvId, rightCvId) {
+  return apiRequest("/api/cvs/compare", {
+    method: "POST",
+    body: JSON.stringify({ leftCvId, rightCvId }),
+  });
+}
+
 export function fetchJobsFromAdzuna() {
   return apiRequest("/api/jobs/fetch");
 }

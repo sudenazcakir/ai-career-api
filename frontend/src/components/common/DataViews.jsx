@@ -13,13 +13,23 @@ export function ProfileSummary({ cv }) {
   return (
     <div className={ui.profileSummary}>
       <h3 className="min-w-0 break-words text-lg font-black">{cv.title}</h3>
+      <p className={`${ui.muted} mb-2`}>
+        {cv.type || "General"} · {cv.version || "v1"}
+      </p>
+      {cv.summary && <p className={`${ui.muted} mb-3`}>{cv.summary}</p>}
       <div className={ui.chips}>
-        {cv.skills.map((skill) => (
+        {(cv.skills || []).map((skill) => (
           <span className={ui.chip} key={skill}>
             {skill}
           </span>
         ))}
       </div>
+      {Boolean((cv.projects || []).length) && (
+        <p className={`${ui.muted} mt-2`}>
+          {(cv.projects || []).length} project
+          {(cv.projects || []).length === 1 ? "" : "s"}
+        </p>
+      )}
     </div>
   );
 }

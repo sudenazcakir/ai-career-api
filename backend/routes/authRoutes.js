@@ -26,15 +26,15 @@ function validatePhoneNumber(value, required = false) {
   }
 
   if (raw && /[^0-9]/.test(raw)) {
-    return "Telefon numarasi sadece rakamlardan olusmalidir.";
+    return "Phone number must contain digits only.";
   }
 
   if (normalized.startsWith("0")) {
-    return "Telefon numarasi basinda 0 olmadan 10 haneli olmalidir.";
+    return "Phone number must be 10 digits and must not start with 0.";
   }
 
   if (normalized.length !== 10) {
-    return "Telefon numarasi 10 haneli olmalidir.";
+    return "Phone number must be exactly 10 digits.";
   }
 
   return null;
@@ -42,23 +42,23 @@ function validatePhoneNumber(value, required = false) {
 
 function validatePassword(password = "") {
   if (password.length < 8) {
-    return "Sifre en az 8 karakter olmalidir.";
+    return "Password must be at least 8 characters.";
   }
 
   if (!/[A-Z]/.test(password)) {
-    return "Sifre en az bir buyuk harf icermelidir.";
+    return "Password must include at least one uppercase letter.";
   }
 
   if (!/[a-z]/.test(password)) {
-    return "Sifre en az bir kucuk harf icermelidir.";
+    return "Password must include at least one lowercase letter.";
   }
 
   if (!/[0-9]/.test(password)) {
-    return "Sifre en az bir rakam icermelidir.";
+    return "Password must include at least one number.";
   }
 
-  if (!/[.!@#$%^&*\-_]/.test(password)) {
-    return "Sifre en az bir ozel karakter icermelidir.";
+  if (!/[^\w\s]/.test(password)) {
+    return "Password must include at least one special character.";
   }
 
   return null;
@@ -105,7 +105,7 @@ router.post("/auth/register", async (req, res) => {
 
     if (!profile.firstName || !profile.lastName || !profile.email || !password) {
       return validationFailed(res, {
-        form: "firstName, lastName, email and password are required",
+        form: "First name, last name, email, and password are required.",
       });
     }
 
@@ -159,8 +159,8 @@ router.post("/auth/login", async (req, res) => {
 
     if (!email || !password) {
       const errors = {};
-      if (!email) errors.email = "Email zorunludur.";
-      if (!password) errors.password = "Sifre zorunludur.";
+      if (!email) errors.email = "Email is required.";
+      if (!password) errors.password = "Password is required.";
       return validationFailed(res, errors);
     }
 

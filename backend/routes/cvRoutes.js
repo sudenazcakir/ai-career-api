@@ -8,7 +8,12 @@ function normalizeSkills(skills = []) {
   return [...new Set(skills.map((skill) => String(skill).trim()).filter(Boolean))];
 }
 
-function validateCvPayload({ title, skills }, partial = false) {
+function normalizeList(items = []) {
+  return [...new Set(items.map((item) => String(item).trim()).filter(Boolean))];
+}
+
+function validateCvPayload(payload, partial = false) {
+  const { title, skills } = payload;
   if (!partial && !title) {
     return "title is required";
   }
@@ -21,7 +26,79 @@ function validateCvPayload({ title, skills }, partial = false) {
     return "skills must be an array";
   }
 
+  const listFields = ["projects", "experience", "education", "certifications"];
+  const invalidField = listFields.find(
+    (field) => payload[field] !== undefined && !Array.isArray(payload[field])
+  );
+  if (invalidField) {
+    return `${invalidField} must be an array`;
+  }
+
   return null;
+}
+
+function buildCvFields(payload) {
+  const fields = {};
+  const stringFields = ["title", "type", "version", "summary"];
+  const listFields = ["projects", "experience", "education", "certifications"];
+
+  stringFields.forEach((field) => {
+    if (payload[field] !== undefined) fields[field] = String(payload[field]).trim();
+  });
+
+  if (payload.skills !== undefined) fields.skills = normalizeSkills(payload.skills);
+  listFields.forEach((field) => {
+    if (payload[field] !== undefined) fields[field] = normalizeList(payload[field]);
+  });
+
+  return fields;
+}
+
+function asSet(items = []) {
+  return new Set(items.map((item) => String(item).trim().toLowerCase()).filter(Boolean));
+}
+
+function compareLists(left = [], right = []) {
+  const leftSet = asSet(left);
+  const rightSet = asSet(right);
+
+  return {
+    shared: left.filter((item) => rightSet.has(String(item).toLowerCase())),
+    onlyLeft: left.filter((item) => !rightSet.has(String(item).toLowerCase())),
+    onlyRight: right.filter((item) => !leftSet.has(String(item).toLowerCase())),
+  };
+}
+
+function nextVersionLabel(version = "v1") {
+  const match = String(version || "").match(/v?(\d+)$/i);
+  const next = match ? Number(match[1]) + 1 : 2;
+  return `v${next}`;
+}
+
+function buildCvComparison(left, right) {
+  const skillComparison = compareLists(left.skills || [], right.skills || []);
+  const fieldNames = ["projects", "experience", "education", "certifications"];
+  const fieldComparison = fieldNames.map((field) => ({
+    field,
+    leftCount: left[field]?.length || 0,
+    rightCount: right[field]?.length || 0,
+    ...compareLists(left[field] || [], right[field] || []),
+  }));
+
+  const totalUniqueSkills = new Set([
+    ...(left.skills || []).map((skill) => String(skill).toLowerCase()),
+    ...(right.skills || []).map((skill) => String(skill).toLowerCase()),
+  ]).size;
+
+  return {
+    left,
+    right,
+    skills: skillComparison,
+    fields: fieldComparison,
+    similarityScore: totalUniqueSkills
+      ? Math.round((skillComparison.shared.length / totalUniqueSkills) * 100)
+      : 0,
+  };
 }
 
 /**
@@ -77,16 +154,23 @@ router.post("/", async (req, res) => {
       return res.status(503).json({ error: "Database is not connected" });
     }
 
-    const { title, skills = [] } = req.body;
-    const validationError = validateCvPayload({ title, skills });
+    const validationError = validateCvPayload(req.body);
     if (validationError) {
       return res.status(400).json({ error: validationError });
     }
 
     const cv = await CV.create({
       owner: req.user._id,
-      title: title.trim(),
-      skills: normalizeSkills(skills),
+      type: "General",
+      version: "v1",
+      ...buildCvFields({
+        skills: [],
+        projects: [],
+        experience: [],
+        education: [],
+        certifications: [],
+        ...req.body,
+      }),
     });
 
     res.status(201).json({ success: true, data: cv });
@@ -136,16 +220,12 @@ router.put("/:id", async (req, res) => {
       return res.status(400).json({ error: "Invalid CV id" });
     }
 
-    const { title, skills } = req.body;
-    const validationError = validateCvPayload({ title, skills }, true);
+    const validationError = validateCvPayload(req.body, true);
     if (validationError) {
       return res.status(400).json({ error: validationError });
     }
 
-    const updates = {};
-
-    if (title !== undefined) updates.title = title.trim();
-    if (skills !== undefined) updates.skills = normalizeSkills(skills);
+    const updates = buildCvFields(req.body);
 
     const cv = await CV.findOneAndUpdate(
       { _id: id, owner: req.user._id },
@@ -200,6 +280,75 @@ router.delete("/:id", async (req, res) => {
       message: "CV deleted",
       data: deleted,
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/:id/version", async (req, res) => {
+  try {
+    if (CV.db.readyState !== 1) {
+      return res.status(503).json({ error: "Database is not connected" });
+    }
+
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid CV id" });
+    }
+
+    const source = await CV.findOne({ _id: id, owner: req.user._id });
+    if (!source) {
+      return res.status(404).json({ error: "CV not found" });
+    }
+
+    const validationError = validateCvPayload(req.body || {}, true);
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
+    }
+
+    const overrides = buildCvFields(req.body || {});
+    const version = overrides.version || nextVersionLabel(source.version);
+    const sourceObject = source.toObject();
+    delete sourceObject._id;
+    delete sourceObject.__v;
+    delete sourceObject.createdAt;
+    delete sourceObject.updatedAt;
+
+    const cv = await CV.create({
+      ...sourceObject,
+      ...overrides,
+      owner: req.user._id,
+      parentCv: source.parentCv || source._id,
+      title: overrides.title || source.title,
+      version,
+    });
+
+    res.status(201).json({ success: true, data: cv });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/compare", async (req, res) => {
+  try {
+    if (CV.db.readyState !== 1) {
+      return res.status(503).json({ error: "Database is not connected" });
+    }
+
+    const { leftCvId, rightCvId } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(leftCvId) || !mongoose.Types.ObjectId.isValid(rightCvId)) {
+      return res.status(400).json({ error: "Valid leftCvId and rightCvId are required" });
+    }
+
+    const [left, right] = await Promise.all([
+      CV.findOne({ _id: leftCvId, owner: req.user._id }),
+      CV.findOne({ _id: rightCvId, owner: req.user._id }),
+    ]);
+    if (!left || !right) {
+      return res.status(404).json({ error: "CV not found" });
+    }
+
+    res.json({ success: true, data: buildCvComparison(left, right) });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

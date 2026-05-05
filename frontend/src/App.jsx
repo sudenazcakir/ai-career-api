@@ -37,7 +37,9 @@ import {
 import {
   buildRoadmap,
   calculateMatch,
+  compareCvProfiles,
   createCvProfile,
+  createCvVersion,
   fetchJobsFromAdzuna,
   filterJobsByQuery,
   getBestCv,
@@ -50,7 +52,15 @@ import {
   updateApplicationStatus,
 } from "./services/careerService";
 import { authBg, ui } from "./styles/ui";
-import { firstError, splitSkills, validateAuthForm } from "./utils/validation";
+import {
+  firstError,
+  friendlyErrorMessage,
+  inferExpectedPatternError,
+  normalizePhoneNumber,
+  splitLines,
+  splitSkills,
+  validateAuthForm,
+} from "./utils/validation";
 
 const DEFAULT_AUTHENTICATED_PATH = "/dashboard";
 const protectedPaths = pages.map((page) => page.path);
@@ -91,9 +101,18 @@ export default function App() {
   const [passport, setPassport] = useState(emptyPassport);
   const [cvs, setCvs] = useState([]);
   const [selectedCvId, setSelectedCvId] = useState("");
+  const [compareCvId, setCompareCvId] = useState("");
+  const [cvComparison, setCvComparison] = useState(null);
   const [cvForm, setCvForm] = useState({
     title: "Backend CV",
+    type: "Backend",
+    version: "v1",
+    summary: "",
     skills: "Java, SQL",
+    projects: "",
+    experience: "",
+    education: "",
+    certifications: "",
   });
   const [filterForm, setFilterForm] = useState({
     keyword: "developer",
@@ -169,6 +188,7 @@ export default function App() {
     const nextCvs = data.data || [];
     setCvs(nextCvs);
     if (!selectedCvId && nextCvs[0]?._id) setSelectedCvId(nextCvs[0]._id);
+    if (!compareCvId && nextCvs[1]?._id) setCompareCvId(nextCvs[1]._id);
   }
 
   async function loadApplications() {
@@ -230,7 +250,11 @@ export default function App() {
   async function submitAuth(event) {
     event.preventDefault();
 
-    const nextErrors = validateAuthForm(authForm, currentAuthMode);
+    const normalizedAuthForm = {
+      ...authForm,
+      phoneNumber: normalizePhoneNumber(authForm.phoneNumber),
+    };
+    const nextErrors = validateAuthForm(normalizedAuthForm, currentAuthMode);
     setAuthErrors(nextErrors);
     if (Object.keys(nextErrors).length) {
       setStatus(firstError(nextErrors));
@@ -239,8 +263,8 @@ export default function App() {
 
     const payload =
       currentAuthMode === "login"
-        ? { email: authForm.email, password: authForm.password }
-        : authForm;
+        ? { email: normalizedAuthForm.email, password: normalizedAuthForm.password }
+        : normalizedAuthForm;
 
     try {
       setPendingAction(currentAuthMode);
@@ -258,7 +282,14 @@ export default function App() {
         setStatus(firstError(error.errors));
         return;
       }
-      setStatus(error.message);
+      if (String(error.message || "").toLowerCase().includes("expected pattern")) {
+        const inferredErrors = inferExpectedPatternError(normalizedAuthForm);
+        setAuthErrors(inferredErrors);
+        setStatus(firstError(inferredErrors));
+        return;
+      }
+      const message = friendlyErrorMessage(error.message);
+      setStatus(message);
     } finally {
       setPendingAction("");
     }
@@ -348,12 +379,50 @@ export default function App() {
     runAction("Creating CV profile", async () => {
       const data = await createCvProfile({
         title: cvForm.title,
+        type: cvForm.type,
+        version: cvForm.version,
+        summary: cvForm.summary,
         skills: splitSkills(cvForm.skills),
+        projects: splitLines(cvForm.projects),
+        experience: splitLines(cvForm.experience),
+        education: splitLines(cvForm.education),
+        certifications: splitLines(cvForm.certifications),
       });
 
       setSelectedCvId(data.data._id);
       await loadCvs();
       setStatus("CV profile created");
+    });
+  }
+
+  function createSelectedCvVersion() {
+    if (!selectedCvId) {
+      setStatus("Select a CV first");
+      return;
+    }
+
+    runAction("Creating CV version", async () => {
+      const data = await createCvVersion(selectedCvId);
+      setSelectedCvId(data.data._id);
+      await loadCvs();
+      setStatus("CV version created");
+    });
+  }
+
+  function compareSelectedCvs() {
+    if (!selectedCvId || !compareCvId) {
+      setStatus("Select two CVs to compare");
+      return;
+    }
+    if (selectedCvId === compareCvId) {
+      setStatus("Choose a different CV to compare");
+      return;
+    }
+
+    runAction("Comparing CV versions", async () => {
+      const data = await compareCvProfiles(selectedCvId, compareCvId);
+      setCvComparison(data.data);
+      setStatus("CV comparison ready");
     });
   }
 
@@ -765,6 +834,7 @@ export default function App() {
             />
           </Routes>
         </div>
+
       </main>
     </div>
   );
