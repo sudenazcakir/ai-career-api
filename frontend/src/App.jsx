@@ -29,7 +29,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import OverviewPage from "./pages/OverviewPage";
 import PassportOnboarding from "./pages/PassportOnboarding";
 import RoadmapPage from "./pages/RoadmapPage";
-import SkillGapPage from "./pages/SkillGapPage";
+import SkillGapPage, { buildSkillGaps } from "./pages/SkillGapPage";
 import { getBackendOrigin, setUnauthorizedHandler } from "./services/api";
 import {
   getCurrentUser,
@@ -551,13 +551,38 @@ export default function App() {
   }
 
   function analyzeGaps() {
+    const allJobs = [...jobs, ...recommendations].filter((job) => job?._id);
+    const uniqueJobs = [...new Map(allJobs.map((job) => [job._id, job])).values()];
+    const marketMissingSkills = buildSkillGaps(uniqueJobs, selectedCv?.skills).map(
+      (gap) => gap.skill
+    );
+    const missingSkills = matchResult?.missingSkills?.length
+      ? matchResult.missingSkills
+      : marketMissingSkills;
+
+    if (!selectedCv) {
+      setStatus("Select a CV first");
+      return;
+    }
+
+    if (!uniqueJobs.length) {
+      setStatus("Load jobs before building a roadmap");
+      return;
+    }
+
+    if (!missingSkills.length) {
+      setStatus("No skill gaps found for this CV");
+      setAnalysisResult(null);
+      return;
+    }
+
     runAction("Building learning roadmap", async () => {
       const data = await buildRoadmap({
-        missingSkills: matchResult?.missingSkills || [],
+        missingSkills,
       });
 
       setAnalysisResult(data);
-      setStatus("Roadmap ready");
+      setStatus(`Roadmap ready: ${data.roadmap?.length || 0} steps`);
     });
   }
 
