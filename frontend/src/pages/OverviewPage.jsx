@@ -1,20 +1,31 @@
 import { FiArrowRight, FiDownload, FiZap } from "react-icons/fi";
 import { Empty, Metric, ProfileSummary } from "../components/common/DataViews";
-import { getScoreClass, ui } from "../styles/ui";
+import { ui } from "../styles/ui";
+
+function getDashboardScoreClass(value = 0) {
+  const base = "inline-flex min-w-[52px] items-center justify-center rounded-[4px] px-2.5 py-1 text-[13px] font-[600]";
+  if (value >= 75) return `${base} bg-[#D7E25C] text-[#0E0E10]`;
+  if (value >= 50) return `${base} bg-[#E6EBFF] text-[#1E3FFF]`;
+  return `${base} bg-[#EFE5F8] text-[#5B2A86]`;
+}
 
 /* Mini match-bar row used in the featured top-recommendation card */
-function MatchBars({ breakdown }) {
-  if (!breakdown) return null;
+function MatchBars({ breakdown, matchScore = 0 }) {
+  const safeBreakdown = breakdown || {
+    skillScore: matchScore,
+    roleScore: matchScore,
+    experienceScore: matchScore,
+  };
   const bars = [
-    { label: "Skill", value: breakdown.skillScore ?? 0,      color: "var(--c-ink)" },
-    { label: "Role",  value: breakdown.roleScore ?? 0,       color: "var(--c-cobalt)" },
-    { label: "Exp",   value: breakdown.experienceScore ?? 0, color: "var(--c-slate)" },
+    { label: "Skill", value: safeBreakdown.skillScore ?? 0,      color: "var(--c-ink)" },
+    { label: "Role",  value: safeBreakdown.roleScore ?? 0,       color: "var(--c-cobalt)" },
+    { label: "Exp",   value: safeBreakdown.experienceScore ?? 0, color: "var(--c-slate)" },
   ];
   return (
     <div className="mt-3 grid gap-1.5">
       {bars.map(({ label, value, color }) => (
         <div key={label} className="grid items-center gap-2"
-             style={{ gridTemplateColumns: "40px 1fr 26px" }}>
+             style={{ gridTemplateColumns: "42px 1fr 34px" }}>
           <span className="text-[10px] font-medium uppercase tracking-[0.04em] text-[#6B6B72]"
                 style={{ fontFamily: "var(--font-mono)" }}>
             {label}
@@ -44,8 +55,10 @@ export default function OverviewPage({
   setActivePage,
   topScore,
 }) {
-  const topRec   = recommendations[0] ?? null;
-  const restRecs = recommendations.slice(1, 4);
+  const scoredJobs = jobs.filter((job) => job?.breakdown);
+  const rankedJobs = recommendations.length ? recommendations : scoredJobs;
+  const topRec   = rankedJobs[0] ?? null;
+  const restRecs = rankedJobs.slice(1, 4);
 
   return (
     <div className={ui.pageGrid}>
@@ -80,11 +93,11 @@ export default function OverviewPage({
           <div className="mt-5 flex flex-wrap gap-2.5">
             <button className={ui.buttonCobalt} disabled={isBusy} type="button" onClick={fetchJobs}>
               <FiDownload size={14} strokeWidth={1.5} />
-              Import jobs
+              Sync Jobs
             </button>
             <button className={ui.buttonSecondary} disabled={isBusy} type="button" onClick={loadRecommendations}>
               <FiZap size={14} strokeWidth={1.5} />
-              Rank now
+              Get Recommendations
             </button>
           </div>
         </div>
@@ -125,23 +138,24 @@ export default function OverviewPage({
 
                 {/* Skill chips */}
                 <div className={ui.chips}>
-                  {(topRec.matchedSkills || []).slice(0, 4).map((s) => (
+                  {(
+                    topRec.matchedSkills?.length
+                      ? topRec.matchedSkills
+                      : topRec.skills || []
+                  ).slice(0, 5).map((s) => (
                     <span key={s} className={ui.chipMatched}>{s}</span>
                   ))}
                   {(topRec.missingSkills || []).slice(0, 3).map((s) => (
                     <span key={s} className={ui.chipMissing}>{s}</span>
                   ))}
-                  {!(topRec.matchedSkills?.length) && (topRec.skills || []).slice(0, 5).map((s) => (
-                    <span key={s} className={ui.chip}>{s}</span>
-                  ))}
                 </div>
 
                 {/* Match bars */}
-                <MatchBars breakdown={topRec.breakdown} />
+                <MatchBars breakdown={topRec.breakdown} matchScore={topRec.matchScore ?? 0} />
               </div>
 
               {/* Score pill */}
-              <strong className={getScoreClass(topRec.matchScore ?? 0)}>
+              <strong className={getDashboardScoreClass(topRec.matchScore ?? 0)}>
                 {topRec.matchScore ?? 0}%
               </strong>
             </div>
@@ -162,7 +176,7 @@ export default function OverviewPage({
                           <span className="ml-1.5 text-[12px] text-[#6B6B72]">· {job.company}</span>
                         )}
                       </div>
-                      <strong className={getScoreClass(job.matchScore ?? 0)}>
+                      <strong className={getDashboardScoreClass(job.matchScore ?? 0)}>
                         {job.matchScore ?? 0}%
                       </strong>
                     </div>
@@ -172,7 +186,7 @@ export default function OverviewPage({
             )}
           </>
         ) : (
-          <Empty msg="No recommendations yet. Import jobs and click Rank now." />
+          <Empty msg="No recommendations yet. Sync jobs and click Get Recommendations." />
         )}
       </section>
 

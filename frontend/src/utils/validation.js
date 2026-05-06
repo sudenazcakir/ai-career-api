@@ -115,6 +115,44 @@ export function friendlyErrorMessage(message) {
   return message;
 }
 
+export function normalizePassportForAI(passport) {
+  const ITEM_SEP = "||";
+  const FIELD_SEP = "::";
+  const normalized = { ...passport };
+
+  if (passport.projects && (passport.projects.includes(ITEM_SEP) || passport.projects.includes(FIELD_SEP))) {
+    normalized.projects = passport.projects
+      .split(ITEM_SEP)
+      .map((item) => {
+        const idx = item.indexOf(FIELD_SEP);
+        if (idx >= 0) {
+          const title = item.slice(0, idx).trim();
+          const desc = item.slice(idx + FIELD_SEP.length).trim();
+          return [title, desc].filter(Boolean).join(" - ");
+        }
+        return item.trim();
+      })
+      .filter(Boolean)
+      .join("; ");
+  }
+
+  if (passport.certificates && (passport.certificates.includes(ITEM_SEP) || passport.certificates.includes(FIELD_SEP))) {
+    normalized.certificates = passport.certificates
+      .split(ITEM_SEP)
+      .map((item) => {
+        const parts = item.split(FIELD_SEP);
+        const title = (parts[0] || "").trim();
+        const issuer = (parts[1] || "").trim();
+        const link = (parts[2] || "").trim();
+        return [title, issuer && `(${issuer})`, link].filter(Boolean).join(" ");
+      })
+      .filter(Boolean)
+      .join("; ");
+  }
+
+  return normalized;
+}
+
 export function inferExpectedPatternError(form) {
   const namePattern = /^[A-Za-z][A-Za-z\s'-]*$/;
 

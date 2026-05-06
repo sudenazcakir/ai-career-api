@@ -4,6 +4,7 @@ const Job = require("../models/Job");
 const CV = require("../models/CV");
 const fetchAdzunaJobs = require("../services/adzunaService");
 const extractSkills = require("../services/skillExtractor");
+const { scoreMatch } = require("../services/matchService");
 
 const router = express.Router();
 
@@ -15,16 +16,26 @@ function normalizeSkills(skills = []) {
   return [...new Set(skills.map((skill) => String(skill).trim()).filter(Boolean))];
 }
 
-function calculateMatchScore(jobSkills = [], userSkills = []) {
-  if (!Array.isArray(jobSkills) || jobSkills.length === 0) {
-    return 0;
-  }
 
-  const normalizedUserSkills = userSkills.map((skill) => String(skill).toLowerCase());
-  const matches = jobSkills.filter((skill) =>
-    normalizedUserSkills.includes(String(skill).toLowerCase())
-  );
-  return Math.round((matches.length / jobSkills.length) * 100);
+function inferRemoteType(job) {
+  const text = [
+    job.location?.display_name || "",
+    job.description || "",
+    job.contract_time || "",
+    job.contract_type || "",
+  ].join(" ").toLowerCase();
+  if (/\bhybrid\b/.test(text)) return "Hybrid";
+  if (/\bremote\b|\bwork from home\b|\bwfh\b/.test(text)) return "Remote";
+  return "On-site";
+}
+
+function inferSeniority(title = "") {
+  const lower = title.toLowerCase();
+  if (/\bintern\b|\btrainee\b|\bapprentice\b|\bgraduate\b/.test(lower)) return "Intern";
+  if (/\bjunior\b|\bjr\.?\b|\bentry.?level\b/.test(lower)) return "Junior";
+  if (/\bsenior\b|\bsr\.?\b|\blead\b|\bprincipal\b|\bstaff\b/.test(lower)) return "Senior";
+  if (/\bmid\b|\bmiddle\b/.test(lower)) return "Mid";
+  return "Mid";
 }
 
 function buildJobDocument(job) {
@@ -44,6 +55,8 @@ function buildJobDocument(job) {
     contractTime: job.contract_time || "",
     redirectUrl: job.redirect_url || "",
     createdAt: job.created ? new Date(job.created) : new Date(),
+    remoteType: inferRemoteType(job),
+    seniority: inferSeniority(title),
   };
 }
 
@@ -145,29 +158,58 @@ router.get("/jobs", async (req, res) => {
  */
 router.get("/jobs/filter", async (req, res) => {
   try {
-    const { keyword, skill, minMatch, sort, cvId } = req.query;
+    const {
+      keyword, skill, minMatch, sort, cvId,
+      company, location, remoteType, seniority,
+      salaryMin, maxSkillGap, level,
+    } = req.query;
 
     if (Job.db.readyState !== 1) {
       return res.status(503).json({ error: "Database is not connected" });
     }
 
-    const needsCvContext = Boolean(cvId || minMatch !== undefined || sort === "score");
+    const needsCvContext = Boolean(
+      (minMatch !== undefined && minMatch !== "") ||
+      (maxSkillGap !== undefined && maxSkillGap !== "") ||
+      level ||
+      sort === "score" ||
+      sort === "gaps" ||
+      sort === "potential"
+    );
 
     if (needsCvContext && !cvId) {
       return res.status(400).json({
-        error: "cvId is required when using minMatch or sort=score",
+        error: "cvId is required when using minMatch, maxSkillGap, level, or score-based sorting",
       });
     }
 
     let minMatchValue;
-    if (minMatch !== undefined) {
+    if (minMatch !== undefined && minMatch !== "") {
       minMatchValue = Number(minMatch);
       if (Number.isNaN(minMatchValue)) {
         return res.status(400).json({ error: "minMatch must be a number" });
       }
     }
 
+    let maxSkillGapValue;
+    if (maxSkillGap !== undefined && maxSkillGap !== "") {
+      maxSkillGapValue = Number(maxSkillGap);
+      if (Number.isNaN(maxSkillGapValue)) {
+        return res.status(400).json({ error: "maxSkillGap must be a number" });
+      }
+    }
+
+    let salaryMinValue;
+    if (salaryMin !== undefined && salaryMin !== "") {
+      salaryMinValue = Number(salaryMin);
+      if (Number.isNaN(salaryMinValue)) {
+        return res.status(400).json({ error: "salaryMin must be a number" });
+      }
+    }
+
+    // Build MongoDB query (DB-level filters)
     const query = {};
+
     if (keyword) {
       query.$or = [
         { title: { $regex: escapeRegex(keyword), $options: "i" } },
@@ -175,8 +217,26 @@ router.get("/jobs/filter", async (req, res) => {
         { description: { $regex: escapeRegex(keyword), $options: "i" } },
       ];
     }
+
+    if (company) {
+      query.company = { $regex: escapeRegex(company), $options: "i" };
+    }
+
+    if (location) {
+      query.location = { $regex: escapeRegex(location), $options: "i" };
+    }
+
+    if (remoteType) {
+      query.remoteType = { $regex: escapeRegex(remoteType), $options: "i" };
+    }
+
+    if (seniority) {
+      query.seniority = { $regex: escapeRegex(seniority), $options: "i" };
+    }
+
     let jobs = await Job.find(query).sort({ createdAt: -1 });
 
+    // Skill filter (in-memory, deterministic)
     if (skill) {
       const normalizedSkill = String(skill).trim().toLowerCase();
       jobs = jobs.filter((job) =>
@@ -186,7 +246,15 @@ router.get("/jobs/filter", async (req, res) => {
       );
     }
 
-    let userSkills = [];
+    // Salary filter (in-memory — exclude jobs with no salary data if filter is active)
+    if (salaryMinValue !== undefined) {
+      jobs = jobs.filter((job) => {
+        if (job.salaryMax == null && job.salaryMin == null) return false;
+        return Math.max(job.salaryMax ?? 0, job.salaryMin ?? 0) >= salaryMinValue;
+      });
+    }
+
+    // CV-based scoring (uses full weighted scoreMatch for consistency with /recommendations)
     if (cvId) {
       if (!mongoose.Types.ObjectId.isValid(cvId)) {
         return res.status(400).json({ error: "Invalid cvId" });
@@ -197,20 +265,46 @@ router.get("/jobs/filter", async (req, res) => {
         return res.status(404).json({ error: "CV not found" });
       }
 
-      userSkills = cv.skills || [];
-      jobs = jobs.map((job) => ({
-        ...job.toObject(),
-        matchScore: calculateMatchScore(job.skills, userSkills),
-      }));
+      jobs = jobs.map((job) => {
+        const result = scoreMatch({ cv, job });
+        return {
+          ...job.toObject(),
+          matchScore:    result.matchScore,
+          level:         result.level,
+          explanation:   result.explanation,
+          matchedSkills: result.matchedSkills,
+          partialSkills: result.partialSkills,
+          missingSkills: result.missingSkills,
+          breakdown:     result.breakdown,
+        };
+      });
     }
 
+    // Post-scoring filters
     if (minMatchValue !== undefined) {
-      jobs = jobs.filter((job) => job.matchScore >= minMatchValue);
+      jobs = jobs.filter((job) => (job.matchScore ?? 0) >= minMatchValue);
     }
 
+    if (maxSkillGapValue !== undefined) {
+      jobs = jobs.filter((job) => (job.missingSkills?.length ?? 0) <= maxSkillGapValue);
+    }
+
+    if (level) {
+      jobs = jobs.filter((job) => job.level === level);
+    }
+
+    // Sort
     if (sort === "score") {
-      jobs.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
-    } else if (sort === "newest") {
+      jobs.sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
+    } else if (sort === "gaps" && cvId) {
+      jobs.sort((a, b) => (a.missingSkills?.length ?? 0) - (b.missingSkills?.length ?? 0));
+    } else if (sort === "potential" && cvId) {
+      jobs.sort((a, b) => {
+        const aScore = (a.breakdown?.experienceScore ?? 0) + (a.breakdown?.roleScore ?? 0);
+        const bScore = (b.breakdown?.experienceScore ?? 0) + (b.breakdown?.roleScore ?? 0);
+        return bScore - aScore;
+      });
+    } else {
       jobs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 

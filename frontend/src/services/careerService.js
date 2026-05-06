@@ -101,3 +101,25 @@ export function updateApplicationStatus(id, status) {
     body: JSON.stringify({ status }),
   });
 }
+
+export function getSimilarApplications() {
+  return apiRequest("/api/applications/similar-roles");
+}
+
+export function deleteCv(cvId) {
+  return apiRequest(`/api/cvs/${cvId}`, { method: "DELETE" });
+}
+
+export function updateCv(cvId, payload) {
+  return apiRequest(`/api/cvs/${cvId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function generateCv(payload) {
+  return apiRequest("/api/cvs/generate", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

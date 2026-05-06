@@ -26,7 +26,7 @@ function inferTargetField(job = null, passport = {}) {
 function splitList(value = "") {
   return value
     .toString()
-    .split(/,|\n/)
+    .split(/,|\n|;/)
     .map((item) => item.trim())
     .filter(Boolean);
 }

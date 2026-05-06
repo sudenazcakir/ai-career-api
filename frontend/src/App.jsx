@@ -48,13 +48,16 @@ import {
   filterJobsByQuery,
   getBestCv,
   getSuccessScore,
-  getRecommendations,
   getSkillAnalytics,
   getTrendAnalytics,
+  deleteCv,
+  generateCv,
+  getSimilarApplications,
   listApplications,
   listCvs,
   trackApplication,
   updateApplicationStatus,
+  updateCv,
 } from "./services/careerService";
 import { ui } from "./styles/ui";
 import {
@@ -62,6 +65,7 @@ import {
   friendlyErrorMessage,
   inferExpectedPatternError,
   normalizePhoneNumber,
+  normalizePassportForAI,
   splitLines,
   splitSkills,
   validateAuthForm,
@@ -80,6 +84,19 @@ const NAV_ICONS = {
 };
 
 const DEFAULT_AUTHENTICATED_PATH = "/dashboard";
+const DEFAULT_FILTER_FORM = {
+  keyword: "",
+  skill: "",
+  minMatch: "",
+  sort: "newest",
+  company: "",
+  location: "",
+  remoteType: "",
+  seniority: "",
+  salaryMin: "",
+  maxSkillGap: "",
+  level: "",
+};
 const protectedPaths = pages.map((page) => page.path);
 const pageById = Object.fromEntries(pages.map((page) => [page.id, page]));
 
@@ -119,6 +136,7 @@ export default function App() {
   const [cvs, setCvs] = useState([]);
   const [selectedCvId, setSelectedCvId] = useState("");
   const [compareCvId, setCompareCvId] = useState("");
+  const [editingCvId, setEditingCvId] = useState(null);
   const [cvComparison, setCvComparison] = useState(null);
   const [cvForm, setCvForm] = useState({
     title: "Backend CV",
@@ -131,12 +149,7 @@ export default function App() {
     education: "",
     certifications: "",
   });
-  const [filterForm, setFilterForm] = useState({
-    keyword: "developer",
-    skill: "Java",
-    minMatch: "",
-    sort: "newest",
-  });
+  const [filterForm, setFilterForm] = useState(DEFAULT_FILTER_FORM);
   const [matchForm, setMatchForm] = useState(defaultMatch);
   const [jobs, setJobs] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
@@ -229,6 +242,37 @@ export default function App() {
   async function loadApplications() {
     const data = await listApplications();
     setApplications(data.data || []);
+  }
+
+  function loadCvIntoForm(cv) {
+    setCvForm({
+      title: cv.title || "",
+      type: cv.type || "",
+      version: cv.version || "",
+      summary: cv.summary || "",
+      skills: (cv.skills || []).join(", "),
+      projects: (cv.projects || []).join("\n"),
+      experience: (cv.experience || []).join("\n"),
+      education: (cv.education || []).join("\n"),
+      certifications: (cv.certifications || []).join("\n"),
+    });
+    setEditingCvId(cv._id);
+    setSelectedCvId(cv._id);
+  }
+
+  function clearEditMode() {
+    setEditingCvId(null);
+    setCvForm({
+      title: "Backend CV",
+      type: "Backend",
+      version: "v1",
+      summary: "",
+      skills: "Java, SQL",
+      projects: "",
+      experience: "",
+      education: "",
+      certifications: "",
+    });
   }
 
   function handleTrackApplication(jobOrJobId, cvIdOrStatus, nextStatus = "Under Review") {
@@ -491,25 +535,35 @@ export default function App() {
     }
   }
 
-  function createCv(event) {
+  function saveCv(event) {
     event.preventDefault();
-    runAction("Creating CV profile", async () => {
-      const data = await createCvProfile({
-        title: cvForm.title,
-        type: cvForm.type,
-        version: cvForm.version,
-        summary: cvForm.summary,
-        skills: splitSkills(cvForm.skills),
-        projects: splitLines(cvForm.projects),
-        experience: splitLines(cvForm.experience),
-        education: splitLines(cvForm.education),
-        certifications: splitLines(cvForm.certifications),
-      });
+    const payload = {
+      title: cvForm.title,
+      type: cvForm.type,
+      version: cvForm.version,
+      summary: cvForm.summary,
+      skills: splitSkills(cvForm.skills),
+      projects: splitLines(cvForm.projects),
+      experience: splitLines(cvForm.experience),
+      education: splitLines(cvForm.education),
+      certifications: splitLines(cvForm.certifications),
+    };
 
-      setSelectedCvId(data.data._id);
-      await loadCvs();
-      setStatus("CV profile created");
-    });
+    if (editingCvId) {
+      runAction("Updating CV", async () => {
+        await updateCv(editingCvId, payload);
+        await loadCvs();
+        setEditingCvId(null);
+        setStatus("CV updated");
+      });
+    } else {
+      runAction("Creating CV profile", async () => {
+        const data = await createCvProfile(payload);
+        setSelectedCvId(data.data._id);
+        await loadCvs();
+        setStatus("CV profile created");
+      });
+    }
   }
 
   function createSelectedCvVersion() {
@@ -543,6 +597,52 @@ export default function App() {
     });
   }
 
+  function handleDeleteCv(cvId) {
+    runAction("Deleting CV", async () => {
+      await deleteCv(cvId);
+      if (editingCvId === cvId) setEditingCvId(null);
+      if (compareCvId === cvId) setCompareCvId("");
+      const data = await listCvs();
+      const nextCvs = data.data || [];
+      setCvs(nextCvs);
+      if (selectedCvId === cvId) {
+        const next = nextCvs.find((cv) => cv._id !== cvId);
+        setSelectedCvId(next?._id || "");
+      }
+      setStatus("CV deleted");
+    });
+  }
+
+  function generateCvFromPassport() {
+    if (!passport?.skills && !passport?.targetTitle && !passport?.experience) {
+      setStatus("Fill in your Career Passport first (at least Skills or Target role)");
+      return;
+    }
+    runAction("Generating CV draft from passport", async () => {
+      const normalizedPassport = normalizePassportForAI(passport);
+      const data = await generateCv({
+        passport: normalizedPassport,
+        targetField: passport.targetTitle ? "Auto" : "Backend",
+      });
+      const draft = data.data;
+      setCvForm({
+        title: draft.title || "",
+        type: draft.type || "General",
+        version: draft.version || "v1",
+        summary: draft.summary || "",
+        skills: (draft.skills || []).join(", "),
+        projects: (draft.projects || []).join("\n"),
+        experience: (draft.experience || []).join("\n"),
+        education: (draft.education || []).join("\n"),
+        certifications: (draft.certifications || []).join("\n"),
+      });
+      setEditingCvId(null);
+      setStatus(
+        draft.message ? `CV draft ready — ${draft.message}` : "CV draft ready — review and save"
+      );
+    });
+  }
+
   function fetchJobs() {
     runAction("Fetching jobs from Adzuna", async () => {
       const data = await fetchJobsFromAdzuna();
@@ -560,7 +660,12 @@ export default function App() {
     event?.preventDefault();
     runAction("Filtering jobs from database", async () => {
       const needsCvContext =
-        Boolean(filterForm.minMatch) || filterForm.sort === "score";
+        Boolean(filterForm.minMatch) ||
+        Boolean(filterForm.maxSkillGap) ||
+        Boolean(filterForm.level) ||
+        filterForm.sort === "score" ||
+        filterForm.sort === "gaps" ||
+        filterForm.sort === "potential";
 
       if (needsCvContext && !selectedCvId) {
         setStatus("Select or create a CV before using match score filters.");
@@ -586,9 +691,29 @@ export default function App() {
     }
 
     runAction("Ranking recommendations", async () => {
-      const data = await getRecommendations(selectedCvId);
-      setRecommendations(data.recommendations || []);
-      setStatus("Recommendations ranked");
+      const params = new URLSearchParams({
+        cvId: selectedCvId,
+        sort: "score",
+      });
+      const data = await filterJobsByQuery(params);
+      const rankedJobs = data.data || [];
+      setJobs(rankedJobs);
+      setRecommendations(rankedJobs.slice(0, 10));
+      setFilterForm((current) => ({ ...current, sort: "score" }));
+      setStatus(`${rankedJobs.length} jobs ranked`);
+    });
+  }
+
+  function resetJobFilters() {
+    const nextFilterForm = { ...DEFAULT_FILTER_FORM };
+    setFilterForm(nextFilterForm);
+
+    runAction("Resetting job filters", async () => {
+      const params = new URLSearchParams({ sort: nextFilterForm.sort });
+      if (selectedCvId) params.set("cvId", selectedCvId);
+      const data = await filterJobsByQuery(params);
+      setJobs(data.data || []);
+      setStatus(`${data.data?.length || 0} jobs loaded`);
     });
   }
 
@@ -903,7 +1028,15 @@ export default function App() {
               className={ui.accountButton}
               onClick={() => navigatePage("account")}
             >
-              {user.photo ? <img alt="Profile" src={user.photo} /> : user.firstName?.[0] || "U"}
+              {user.photo ? (
+                <img
+                  alt="Profile"
+                  className="h-full w-full object-cover"
+                  src={user.photo}
+                />
+              ) : (
+                user.firstName?.[0] || "U"
+              )}
             </button>
           </div>
         </header>
@@ -933,14 +1066,20 @@ export default function App() {
               path="/cvs"
               element={
                 <CvPage
+                  clearEditMode={clearEditMode}
                   compareCvId={compareCvId}
                   compareSelectedCvs={compareSelectedCvs}
-                  createCv={createCv}
                   createSelectedCvVersion={createSelectedCvVersion}
                   cvComparison={cvComparison}
                   cvForm={cvForm}
                   cvs={cvs}
+                  deleteCv={handleDeleteCv}
+                  editingCvId={editingCvId}
+                  generateCvFromPassport={generateCvFromPassport}
                   isBusy={isBusy}
+                  loadCvIntoForm={loadCvIntoForm}
+                  passport={passport}
+                  saveCv={saveCv}
                   selectedCv={selectedCv}
                   selectedCvId={selectedCvId}
                   setCompareCvId={setCompareCvId}
@@ -964,6 +1103,7 @@ export default function App() {
                   fetchJobs={fetchJobs}
                   filterJobs={filterJobs}
                   loadRecommendations={loadRecommendations}
+                  resetJobFilters={resetJobFilters}
                   trackApplication={handleTrackApplication}
                   isBusy={isBusy}
                 />

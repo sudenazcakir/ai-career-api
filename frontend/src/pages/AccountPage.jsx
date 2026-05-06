@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FiCamera, FiEdit2, FiLogOut } from "react-icons/fi";
+import { FiCamera, FiEdit2, FiLogOut, FiTrash2 } from "react-icons/fi";
 import CareerMatrixPanel from "../components/account/CareerMatrixPanel";
 import PassportForm from "../components/forms/PassportForm";
 import PhoneField from "../components/forms/PhoneField";
@@ -7,6 +7,93 @@ import { getCareerMatrix } from "../services/careerService";
 import { ui } from "../styles/ui";
 import { buildCareerMatrix } from "../utils/careerMatrix";
 import { normalizePhoneNumber } from "../utils/validation";
+
+function parseProjectsForDisplay(str) {
+  if (!str?.trim()) return [];
+  if (str.includes("||") || str.includes("::")) {
+    return str
+      .split("||")
+      .map((item) => {
+        const idx = item.indexOf("::");
+        return idx >= 0
+          ? { title: item.slice(0, idx).trim(), description: item.slice(idx + 2).trim() }
+          : { title: "", description: item.trim() };
+      })
+      .filter((p) => p.title || p.description);
+  }
+  return [{ title: "", description: str.trim() }];
+}
+
+function parseCertificatesForDisplay(str) {
+  if (!str?.trim()) return [];
+  if (str.includes("||") || str.includes("::")) {
+    return str
+      .split("||")
+      .map((item) => {
+        const parts = item.split("::");
+        return {
+          title: (parts[0] || "").trim(),
+          issuer: (parts[1] || "").trim(),
+          link: (parts[2] || "").trim(),
+        };
+      })
+      .filter((c) => c.title || c.issuer);
+  }
+  return [{ title: str.trim(), issuer: "", link: "" }];
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+async function createAvatarDataUrl(file) {
+  const originalDataUrl = await readFileAsDataUrl(file);
+
+  try {
+    const image = await loadImage(originalDataUrl);
+    const size = 320;
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) return originalDataUrl;
+
+    canvas.width = size;
+    canvas.height = size;
+
+    const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
+    const sourceX = Math.max((image.naturalWidth - sourceSize) / 2, 0);
+    const sourceY = Math.max((image.naturalHeight - sourceSize) / 2, 0);
+
+    context.drawImage(
+      image,
+      sourceX,
+      sourceY,
+      sourceSize,
+      sourceSize,
+      0,
+      0,
+      size,
+      size
+    );
+
+    return canvas.toDataURL("image/jpeg", 0.86);
+  } catch {
+    return originalDataUrl;
+  }
+}
 
 export default function AccountPage({
   isBusy,
@@ -24,6 +111,10 @@ export default function AccountPage({
   const [careerMatrixStatus, setCareerMatrixStatus] = useState("Rule-based preview");
   const fallbackCareerMatrix = useMemo(() => buildCareerMatrix(passport), [passport]);
   const careerMatrix = aiCareerMatrix || fallbackCareerMatrix;
+
+  useEffect(() => {
+    setAccountForm(user);
+  }, [user]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -52,15 +143,26 @@ export default function AccountPage({
     });
   }
 
-  function handlePhotoChange(event) {
+  async function handlePhotoChange(event) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setAccountForm({ ...accountForm, photo: reader.result });
-    };
-    reader.readAsDataURL(file);
+    try {
+      const photo = await createAvatarDataUrl(file);
+      const nextForm = { ...accountForm, photo };
+      setAccountForm(nextForm);
+      await updateUser(nextForm);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  async function removePhoto() {
+    const nextForm = { ...accountForm, photo: "" };
+    setAccountForm(nextForm);
+    await updateUser(nextForm);
   }
 
   function submitPassport(event) {
@@ -73,18 +175,31 @@ export default function AccountPage({
   return (
     <div className="grid gap-4">
       <section className={ui.accountHero}>
-        <label className={ui.avatarEditor}>
-          {renderAvatar(accountForm, ui.accountAvatar)}
-          <input
-            accept="image/*"
-            aria-label="Change profile photo"
-            type="file"
-            onChange={handlePhotoChange}
-          />
-          <span aria-hidden="true">
-            <FiCamera />
-          </span>
-        </label>
+        <div className="grid w-max gap-2">
+          <label className={ui.avatarEditor}>
+            {renderAvatar(accountForm, ui.accountAvatar)}
+            <input
+              accept="image/*"
+              aria-label="Change profile photo"
+              type="file"
+              onChange={handlePhotoChange}
+            />
+            <span aria-hidden="true">
+              <FiCamera />
+            </span>
+          </label>
+          {accountForm.photo && (
+            <button
+              className="inline-flex h-7 items-center justify-center gap-1 rounded-[6px] border border-[#E8E3D7] bg-transparent px-2 text-[11px] font-medium text-[#6B6B72] transition-colors hover:border-[var(--c-danger,#A6261A)] hover:text-[var(--c-danger,#A6261A)] disabled:opacity-50"
+              disabled={isBusy}
+              onClick={removePhoto}
+              type="button"
+            >
+              <FiTrash2 size={11} strokeWidth={1.5} />
+              Remove
+            </button>
+          )}
+        </div>
         <div className="min-w-0">
           <p className={ui.eyebrow}>My account</p>
           <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.01em] text-[#0E0E10]">
@@ -219,6 +334,44 @@ export default function AccountPage({
             <strong>{passport.portfolio || "Not added"}</strong>
           </article>
         </div>
+
+        {parseProjectsForDisplay(passport.projects).length > 0 && (
+          <div className="mt-4">
+            <p className={ui.eyebrow}>Projects</p>
+            <div className="mt-2 grid gap-2">
+              {parseProjectsForDisplay(passport.projects).map((p, i) => (
+                <div key={i} className="rounded-[8px] border border-[#E8E3D7] bg-[#F6F3EC] p-3">
+                  {p.title && <p className="text-[13px] font-semibold text-[#0E0E10]">{p.title}</p>}
+                  {p.description && <p className={`${ui.muted} mt-0.5`}>{p.description}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {parseCertificatesForDisplay(passport.certificates).length > 0 && (
+          <div className="mt-4">
+            <p className={ui.eyebrow}>Certificates</p>
+            <div className="mt-2 grid gap-2">
+              {parseCertificatesForDisplay(passport.certificates).map((c, i) => (
+                <div key={i} className="rounded-[8px] border border-[#E8E3D7] bg-[#F6F3EC] p-3">
+                  {c.title && <p className="text-[13px] font-semibold text-[#0E0E10]">{c.title}</p>}
+                  {c.issuer && <p className={`${ui.muted} mt-0.5`}>{c.issuer}</p>}
+                  {c.link && (
+                    <a
+                      href={c.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 block break-all text-[12px] text-[#1E3FFF] underline"
+                    >
+                      {c.link}
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {isPassportModalOpen && (

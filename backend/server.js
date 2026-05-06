@@ -15,7 +15,7 @@ const FRONTEND_PORT = 5173;
 connectDB();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 // Swagger setup

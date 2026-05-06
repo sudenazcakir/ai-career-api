@@ -12,6 +12,8 @@ const jobSchema = new mongoose.Schema({
   contractType: { type: String, default: "" },
   contractTime: { type: String, default: "" },
   redirectUrl: { type: String, default: "" },
+  remoteType:  { type: String, default: "" },
+  seniority:   { type: String, default: "" },
   createdAt: { type: Date, default: Date.now },
 });
 
