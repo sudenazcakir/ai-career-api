@@ -53,8 +53,9 @@ export default function SkillGapPage({ jobs, recommendations, selectedCv, setAct
     domain:    gaps.filter((g) => g.cat === "domain"),
   };
 
-  const topCategory = Object.entries(byCategory)
+  const topCategoryEntry = Object.entries(byCategory)
     .sort((a, b) => b[1].length - a[1].length)[0];
+  const topCategory = topCategoryEntry?.[1]?.length > 0 ? topCategoryEntry : null;
 
   const hasJobs = uniqueJobs.length > 0;
   const hasCv   = Boolean(selectedCv);

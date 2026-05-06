@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { FiRefreshCw, FiTarget, FiZap } from "react-icons/fi";
 import { ui } from "../styles/ui";
 import { buildSkillGaps } from "./SkillGapPage";
@@ -20,6 +21,7 @@ export default function RoadmapPage({
   analysisResult,
   matchResult,
 }) {
+  const navigate   = useNavigate();
   const allJobs    = [...jobs, ...recommendations].filter((j) => j?._id);
   const uniqueJobs = [...new Map(allJobs.map((j) => [j._id, j])).values()];
   const gaps       = buildSkillGaps(uniqueJobs, selectedCv?.skills);
@@ -93,7 +95,7 @@ export default function RoadmapPage({
                 : "Select a CV to compare against your loaded jobs and generate a growth plan."}
             </p>
             <div className="mt-4 flex justify-center gap-2.5">
-              <button className={ui.buttonCobalt} type="button" onClick={() => window.history.back()}>
+              <button className={ui.buttonCobalt} type="button" onClick={() => navigate("/skill-gaps")}>
                 <FiTarget size={14} strokeWidth={1.5} />
                 Back to Skill Map
               </button>

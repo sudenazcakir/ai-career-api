@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiBookmark, FiCheck } from "react-icons/fi";
 import { getScoreClass, ui } from "../../styles/ui";
 
@@ -55,23 +55,34 @@ export function JobList({ items, onSave }) {
 function JobCard({ job, onSave }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const savedTimerRef = useRef(null);
   const matched = job.matchedSkills || [];
   const missing = job.missingSkills || [];
   const partial = job.partialSkills  || [];
   const hasRich  = matched.length > 0 || missing.length > 0;
+
+  useEffect(() => {
+    return () => {
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    };
+  }, []);
 
   async function handleSave() {
     if (!onSave || isSaving) return;
 
     setIsSaving(true);
     setIsSaved(false);
-    const didSave = await onSave(job, "Saved for Later");
-    setIsSaving(false);
+    let didSave;
+    try {
+      didSave = await onSave(job, "Saved for Later");
+    } finally {
+      setIsSaving(false);
+    }
 
     if (didSave === false) return;
 
     setIsSaved(true);
-    window.setTimeout(() => setIsSaved(false), 1800);
+    savedTimerRef.current = window.setTimeout(() => setIsSaved(false), 1800);
   }
 
   return (

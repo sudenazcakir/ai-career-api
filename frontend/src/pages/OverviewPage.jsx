@@ -58,7 +58,7 @@ export default function OverviewPage({
           color: "var(--c-mist)", opacity: 0.3,
           letterSpacing: "-0.02em", pointerEvents: "none", userSelect: "none",
         }}>
-          {topScore || 86}
+          {topScore ?? 86}
         </span>
 
         <div className="relative min-w-0">

@@ -224,7 +224,7 @@ export default function App() {
       : cvIdOrStatus || selectedCvId;
 
     if (!jobId) {
-      setStatus("Select a saved job first");
+      setStatus("Couldn't determine job ID for this role");
       return false;
     }
     if (!cvId) {
