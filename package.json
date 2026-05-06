@@ -7,7 +7,7 @@
     "server": "node backend/server.js",
     "client": "vite --host 0.0.0.0",
     "build": "vite build",
-    "build:prod": "vite build && cp -r frontend/dist/. backend/public/",
+    "build:prod": "vite build && mkdir -p backend/public && cp -r frontend/dist/. backend/public/",
     "dev": "vite",
     "start": "node backend/server.js",
     "seed:demo": "node backend/scripts/seedDemo.js",

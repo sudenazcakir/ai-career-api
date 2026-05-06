@@ -75,13 +75,14 @@ app.use("/api", careerMatrixRoutes);
 app.use("/api", applicationRoutes);
 app.use("/api", certificateRoutes);
 
-// SPA fallback — React Router için tüm non-API route'ları index.html'e yönlendir
+// SPA catch-all — serves React app for all non-API routes (production)
 app.get("*", (req, res) => {
-  const indexPath = path.join(__dirname, "public", "index.html");
-  res.sendFile(indexPath);
+  res.sendFile(path.join(__dirname, "public", "index.html"), (err) => {
+    if (err) res.status(404).send("Not found");
+  });
 });
 
-// Local geliştirme için server.listen — Vercel'de çalışmaz
+// Only start the HTTP server when run directly (not in Vercel serverless)
 if (require.main === module) {
   const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

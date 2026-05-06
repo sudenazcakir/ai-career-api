@@ -4,6 +4,7 @@ backend/public/
 playwright-report/
 test-results/
 frontend/dist/
+backend/public/
 docs/docx_tmp/
 docs/Backend.pdf
 CHANGELOG_DETAILED.md
