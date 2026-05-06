@@ -6,6 +6,7 @@ require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const swaggerUi = require("swagger-ui-express");
 const swaggerJsdoc = require("swagger-jsdoc");
 const connectDB = require("./config/db");
+const { getDbStatus } = require("./config/db");
 const requireAuth = require("./middleware/authMiddleware");
 
 const app = express();
@@ -57,13 +58,23 @@ const careerMatrixRoutes = require("./routes/careerMatrixRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
 const certificateRoutes = require("./routes/certificateRoutes");
 
-app.use("/api", authRoutes);
-app.use("/api", requireAuth);
-
 // Health endpoint
 app.get("/api/health", (req, res) => {
-  res.json({ success: true, message: "API is running" });
+  res.json({ success: true, message: "API is running", db: getDbStatus() });
 });
+
+app.use("/api", async (req, res, next) => {
+  const connection = await connectDB();
+
+  if (!connection || connection.readyState !== 1) {
+    return res.status(503).json({ error: "Database is not connected" });
+  }
+
+  next();
+});
+
+app.use("/api", authRoutes);
+app.use("/api", requireAuth);
 
 app.use("/api", matchRoutes);
 app.use("/api", jobRoutes);
