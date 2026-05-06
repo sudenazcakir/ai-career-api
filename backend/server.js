@@ -75,8 +75,8 @@ app.use("/api", careerMatrixRoutes);
 app.use("/api", applicationRoutes);
 app.use("/api", certificateRoutes);
 
-// SPA catch-all — serves React app for all non-API routes (production)
-app.get("*", (req, res) => {
+// SPA catch-all: serves React app for all non-API routes in production.
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"), (err) => {
     if (err) res.status(404).send("Not found");
   });
