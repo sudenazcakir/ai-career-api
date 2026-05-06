@@ -1,18 +1,25 @@
-import { ui } from "../../styles/ui";
+import { useEffect, useRef, useState } from "react";
+import { FiBookmark, FiCheck } from "react-icons/fi";
+import { getScoreClass, ui } from "../../styles/ui";
 
-export function Metric({ label, value }) {
+/* ── Metric ─────────────────────────────────────────────────────────────── */
+export function Metric({ label, value, hint }) {
   return (
     <div className={ui.metric}>
       <span className={ui.metricLabel}>{label}</span>
       <strong className={ui.metricValue}>{value}</strong>
+      {hint && <span className="text-[12px] text-[#6B6B72]">{hint}</span>}
     </div>
   );
 }
 
+/* ── ProfileSummary ──────────────────────────────────────────────────────── */
 export function ProfileSummary({ cv }) {
   return (
     <div className={ui.profileSummary}>
-      <h3 className="min-w-0 wrap-break-word text-lg font-black">{cv.title}</h3>
+      <h3 className="text-[15px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
+        {cv.title}
+      </h3>
       <p className={`${ui.muted} mb-2`}>
         {cv.type || "General"} · {cv.version || "v1"}
       </p>
@@ -31,96 +38,122 @@ export function ProfileSummary({ cv }) {
   );
 }
 
-export function JobList({ items }) {
-  if (!items.length) return <Empty />;
+/* ── JobList ─────────────────────────────────────────────────────────────── */
+export function JobList({ items, onSave }) {
+  if (!items.length) return <Empty msg="No jobs yet. Import or filter to populate this list." />;
 
   return (
     <div className={ui.jobList}>
       {items.slice(0, 8).map((job) => (
-        <JobCard job={job} key={job._id || job.title} />
+        <JobCard job={job} key={job._id || job.title} onSave={onSave} />
       ))}
     </div>
   );
 }
 
-function JobCard({ job }) {
+/* ── JobCard ─────────────────────────────────────────────────────────────── */
+function JobCard({ job, onSave }) {
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const savedTimerRef = useRef(null);
   const matched = job.matchedSkills || [];
   const missing = job.missingSkills || [];
   const partial = job.partialSkills  || [];
-  const hasRich = matched.length > 0 || missing.length > 0;
+  const hasRich  = matched.length > 0 || missing.length > 0;
+
+  useEffect(() => {
+    return () => {
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    };
+  }, []);
+
+  async function handleSave() {
+    if (!onSave || isSaving) return;
+
+    setIsSaving(true);
+    setIsSaved(false);
+    let didSave;
+    try {
+      didSave = await onSave(job, "Saved for Later");
+    } finally {
+      setIsSaving(false);
+    }
+
+    if (didSave === false) return;
+
+    setIsSaved(true);
+    savedTimerRef.current = window.setTimeout(() => setIsSaved(false), 1800);
+  }
 
   return (
     <article className={ui.jobRow}>
       <div className="min-w-0">
-        <h3 className="min-w-0 wrap-break-word text-lg font-black">{job.title}</h3>
-        <p className={`${ui.muted} mb-2`}>
-          {job.company || job.location || "Unknown company"}
-        </p>
+        <h3 className="text-[15px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
+          {job.title}
+          {(job.company || job.location) && (
+            <span className="ml-1.5 font-normal text-[#6B6B72]">
+              · {job.company || job.location}
+            </span>
+          )}
+        </h3>
 
-        {/* Explanation sentence */}
         {job.explanation && (
-          <p className="mb-2 text-sm font-semibold text-slate-600">{job.explanation}</p>
+          <p className="mt-1 mb-2 text-[13px] text-[#3A3A40]">{job.explanation}</p>
         )}
 
-        {/* Matched / partial / missing chips */}
+        {/* Skill chips */}
         {hasRich ? (
-          <div className="grid gap-1.5">
+          <div className="mt-2 grid gap-1.5">
             {matched.length > 0 && (
               <div className={ui.chips}>
-                {matched.map((s) => (
-                  <span key={s} className={`${ui.chip} bg-teal-100 text-teal-800`}>{s}</span>
-                ))}
+                {matched.map((s) => <span key={s} className={ui.chipMatched}>{s}</span>)}
               </div>
             )}
             {partial.length > 0 && (
               <div className={ui.chips}>
-                {partial.map((s) => (
-                  <span key={s} className={`${ui.chip} bg-amber-100 text-amber-800`}>{s}</span>
-                ))}
+                {partial.map((s) => <span key={s} className={ui.chipPartial}>{s}</span>)}
               </div>
             )}
             {missing.length > 0 && (
               <div className={ui.chips}>
-                {missing.slice(0, 4).map((s) => (
-                  <span key={s} className={`${ui.chip} bg-red-100 text-red-700`}>{s}</span>
-                ))}
+                {missing.slice(0, 4).map((s) => <span key={s} className={ui.chipMissing}>{s}</span>)}
                 {missing.length > 4 && (
-                  <span className={`${ui.chip} bg-red-50 text-red-500`}>
-                    +{missing.length - 4} more missing
-                  </span>
+                  <span className={ui.chipMissing}>+{missing.length - 4} more</span>
                 )}
               </div>
             )}
           </div>
         ) : (
-          /* Fallback: plain skill chips */
-          <div className={ui.chips}>
+          <div className={`${ui.chips} mt-2`}>
             {(job.skills || []).slice(0, 5).map((skill) => (
               <span className={ui.chip} key={skill}>{skill}</span>
             ))}
           </div>
         )}
 
-        {/* Breakdown mini bar */}
+        {/* Breakdown bars */}
         {job.breakdown && (
-          <div className="mt-2.5 grid gap-1">
+          <div className="mt-3 grid gap-1.5">
             {[
-              { label: "Skill",       score: job.breakdown.skillScore,      color: "bg-teal-600" },
-              { label: "Experience",  score: job.breakdown.experienceScore,  color: "bg-slate-500" },
-              { label: "Role",        score: job.breakdown.roleScore,        color: "bg-indigo-500" },
+              { label: "Skill",      score: job.breakdown.skillScore,      color: "var(--c-ink)" },
+              { label: "Exp",        score: job.breakdown.experienceScore,  color: "var(--c-cobalt)" },
+              { label: "Role",       score: job.breakdown.roleScore,        color: "var(--c-slate)" },
             ].map(({ label, score, color }) => (
-              <div key={label} className="flex items-center gap-2">
-                <span className="w-[70px] shrink-0 text-[10px] font-black uppercase text-slate-400">
+              <div key={label} className="grid items-center gap-2"
+                   style={{ gridTemplateColumns: "52px 1fr 28px" }}>
+                <span className="text-[10px] font-medium uppercase tracking-[0.04em] text-[#6B6B72]"
+                      style={{ fontFamily: "var(--font-mono)" }}>
                   {label}
                 </span>
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-[4px] overflow-hidden rounded-[2px] bg-[#E8E3D7]">
                   <div
-                    className={`h-full rounded-full ${color}`}
-                    style={{ width: `${Math.min(score, 100)}%` }}
+                    className="h-full rounded-[2px]"
+                    style={{ width: `${Math.min(score ?? 0, 100)}%`, background: color }}
                   />
                 </div>
-                <span className="w-[28px] shrink-0 text-right text-[10px] font-black text-slate-500">
-                  {score}%
+                <span className="text-right text-[10px] font-medium text-[#6B6B72]"
+                      style={{ fontFamily: "var(--font-mono)" }}>
+                  {score ?? 0}
                 </span>
               </div>
             ))}
@@ -128,31 +161,47 @@ function JobCard({ job }) {
         )}
       </div>
 
-      <div className="shrink-0 self-start">
+      <div className="flex shrink-0 flex-col items-end gap-2 self-start">
         <ScoreBadge value={job.matchScore} />
         {job.level && (
-          <p className="mt-1 text-center text-[10px] font-black uppercase text-slate-400">
+          <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[#6B6B72]"
+             style={{ fontFamily: "var(--font-mono)" }}>
             {job.level}
           </p>
+        )}
+        {onSave && (
+          <button
+            type="button"
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[8px] border border-[#E8E3D7] bg-[#FBFAF6] px-2.5 text-[12px] font-medium text-[#3A3A40] transition-colors hover:border-[#A4A4AC] hover:text-[#0E0E10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3FFF] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isSaving}
+            onClick={handleSave}
+          >
+            {isSaved ? <FiCheck className="h-3.5 w-3.5" /> : <FiBookmark className="h-3.5 w-3.5" />}
+            {isSaving ? "Saving..." : isSaved ? "Saved" : "Save"}
+          </button>
         )}
       </div>
     </article>
   );
 }
 
+/* ── ScoreBadge ──────────────────────────────────────────────────────────── */
 export function ScoreBadge({ value }) {
   const score = value ?? 0;
-  const colorClass =
-    score >= 75 ? "bg-teal-100 text-teal-800" :
-    score >= 50 ? "bg-amber-100 text-amber-800" :
-                  "bg-red-100 text-red-700";
   return (
-    <strong className={`inline-block min-w-[58px] shrink-0 rounded-full px-2.5 py-1.5 text-center text-sm font-black ${colorClass}`}>
+    <strong className={getScoreClass(score)}>
       {score}%
     </strong>
   );
 }
 
-export function Empty() {
-  return <p className={ui.muted}>No data yet. Run an action to populate this view.</p>;
+/* ── Empty ───────────────────────────────────────────────────────────────── */
+export function Empty({ msg = "No data yet. Run an action to populate this view." }) {
+  return (
+    <p
+      className="rounded-[8px] border border-dashed border-[#A4A4AC] p-6 text-center text-[13px] text-[#6B6B72]"
+    >
+      {msg}
+    </p>
+  );
 }

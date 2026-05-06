@@ -1,3 +1,4 @@
+import { FiAward, FiBarChart2, FiMap, FiSearch, FiTrendingUp, FiZap } from "react-icons/fi";
 import { Empty, ScoreBadge } from "../components/common/DataViews";
 import {
   AnalyticsBar,
@@ -6,6 +7,12 @@ import {
   TrendSummary,
 } from "../components/insights/InsightPanels";
 import { ui } from "../styles/ui";
+
+function interviewPotentialStyle(level) {
+  if (level === "High")   return { background: "var(--c-citron)",    color: "var(--c-ink)" };
+  if (level === "Medium") return { background: "var(--c-warning-50)", color: "var(--c-warning)" };
+  return { background: "var(--c-danger-50)", color: "var(--c-danger)" };
+}
 
 export default function InsightsPage({
   analysisResult,
@@ -26,21 +33,26 @@ export default function InsightsPage({
 }) {
   return (
     <div className={ui.pageGrid}>
+
+      {/* ── Explainability lab ───────────────────────────────────────── */}
       <section className={`${ui.panel} ${ui.full}`}>
-        <div className="mb-4 max-w-2xl min-w-0">
+        <div className="mb-4 min-w-0 max-w-2xl">
           <p className={ui.eyebrow}>Explainability lab</p>
-          <h2 className="text-2xl font-black">Compare skills and generate next steps</h2>
+          <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
+            Compare skills and generate next steps
+          </h2>
         </div>
 
-        <form className="grid grid-cols-[repeat(4,minmax(0,1fr))] items-end gap-3 max-xl:grid-cols-2 max-sm:grid-cols-1" onSubmit={runMatch}>
+        <form
+          className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-3 max-lg:grid-cols-[repeat(2,minmax(0,1fr))] max-sm:grid-cols-1"
+          onSubmit={runMatch}
+        >
           <label className={ui.label}>
             CV skills
             <input
               className={ui.input}
               value={matchForm.cvSkills}
-              onChange={(event) =>
-                setMatchForm({ ...matchForm, cvSkills: event.target.value })
-              }
+              onChange={(e) => setMatchForm({ ...matchForm, cvSkills: e.target.value })}
             />
           </label>
           <label className={ui.label}>
@@ -48,41 +60,57 @@ export default function InsightsPage({
             <input
               className={ui.input}
               value={matchForm.jobSkills}
-              onChange={(event) =>
-                setMatchForm({ ...matchForm, jobSkills: event.target.value })
-              }
+              onChange={(e) => setMatchForm({ ...matchForm, jobSkills: e.target.value })}
             />
           </label>
-          <button className={ui.button} disabled={isBusy} type="submit">
-            {isBusy ? "Running..." : "Run Match"}
-          </button>
-          <button className={ui.button} disabled={isBusy} type="button" onClick={analyzeGaps}>
-            Build Roadmap
+          <button className={`${ui.button} min-w-[160px] justify-center max-lg:col-span-full max-lg:w-full`} disabled={isBusy} type="submit">
+            <FiSearch size={14} strokeWidth={1.5} />
+            {isBusy ? "Running…" : "Run match"}
           </button>
         </form>
 
-        <div className="mt-3 grid grid-cols-[repeat(2,minmax(0,220px))] gap-3 max-sm:grid-cols-1">
-          <button type="button" className={ui.buttonSecondary} disabled={isBusy} onClick={loadAnalytics}>
-            Load Analytics
+        <div className="mt-3 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2 border-t border-[#E8E3D7] pt-3 max-md:grid-cols-1">
+          <button type="button" className={`${ui.buttonSecondary} w-full justify-center`} disabled={isBusy} onClick={loadAnalytics}>
+            <FiBarChart2 size={14} strokeWidth={1.5} />
+            Load analytics
           </button>
-          <button type="button" className={ui.buttonSecondary} disabled={isBusy} onClick={findBestCv}>
-            Best CV for Top Job
+          <button type="button" className={`${ui.buttonSecondary} w-full justify-center`} disabled={isBusy} onClick={findBestCv}>
+            <FiAward size={14} strokeWidth={1.5} />
+            Best CV for top job
+          </button>
+          <button type="button" className={`${ui.buttonSecondary} w-full justify-center`} disabled={isBusy} onClick={analyzeGaps}>
+            <FiMap size={14} strokeWidth={1.5} />
+            Build roadmap
           </button>
         </div>
       </section>
 
+      {/* ── Match explanation ─────────────────────────────────────────── */}
       <section className={ui.panel}>
         <div className={ui.sectionHead}>
-          <h2 className="text-2xl font-black">Match Explanation</h2>
+          <div>
+            <p className={ui.eyebrow}>Match result</p>
+            <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
+              Match explanation
+            </h2>
+          </div>
           <ScoreBadge value={matchResult?.matchScore} />
         </div>
-        {matchResult ? <MatchExplanation result={matchResult} /> : <Empty />}
+        {matchResult ? <MatchExplanation result={matchResult} /> : <Empty msg="Run a match to see the explanation." />}
       </section>
 
+      {/* ── Roadmap ───────────────────────────────────────────────────── */}
       <section className={ui.panel}>
         <div className={ui.sectionHead}>
-          <h2 className="text-2xl font-black">Roadmap</h2>
-          <span className={ui.count}>{analysisResult?.roadmap?.length || 0}</span>
+          <div>
+            <p className={ui.eyebrow}>Skill roadmap</p>
+            <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
+              Roadmap
+            </h2>
+          </div>
+          <span className={ui.count} style={{ fontFamily: "var(--font-mono)" }}>
+            {analysisResult?.roadmap?.length || 0} steps
+          </span>
         </div>
         {analysisResult ? (
           <div className={ui.roadmap}>
@@ -91,78 +119,89 @@ export default function InsightsPage({
             ))}
           </div>
         ) : (
-          <Empty />
+          <Empty msg="Build a roadmap to see steps." />
         )}
       </section>
 
+      {/* ── Best CV result ────────────────────────────────────────────── */}
       <section className={`${ui.panel} ${ui.full}`}>
         <div className={ui.sectionHead}>
-          <h2 className="text-2xl font-black">Best CV Result</h2>
-          <span className={ui.count}>{recommendations.length} ranked jobs</span>
+          <div>
+            <p className={ui.eyebrow}>CV ranking</p>
+            <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
+              Best CV result
+            </h2>
+          </div>
+          <span className={ui.count} style={{ fontFamily: "var(--font-mono)" }}>
+            {recommendations.length} ranked jobs
+          </span>
         </div>
-        {bestCvResult ? <BestCvResult result={bestCvResult} /> : <Empty />}
+        {bestCvResult ? <BestCvResult result={bestCvResult} /> : <Empty msg="Find the best CV for the top job." />}
       </section>
 
-      {/* ── Application Success Score ─────────────────────────────── */}
+      {/* ── Application success score ─────────────────────────────────── */}
       <section className={`${ui.panel} ${ui.full}`}>
         <div className={ui.sectionHead}>
           <div>
             <p className={ui.eyebrow}>Interview predictor</p>
-            <h2 className="text-2xl font-black">Application success score</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Combines match score, skill gap count, experience depth and CV completeness.
-              Uses your selected CV against the top ranked job.
+            <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
+              Application success score
+            </h2>
+            <p className="mt-1 text-[13px] text-[#6B6B72]">
+              Combines match score, skill gap count, experience depth and CV completeness
+              against your top ranked job.
             </p>
           </div>
           <button
-            className={ui.button}
+            className={`${ui.buttonCobalt} h-auto min-h-9 w-auto shrink-0 whitespace-normal px-3 py-2 leading-tight max-sm:w-full`}
             disabled={isBusy}
             type="button"
             onClick={calculateSuccessScore}
           >
+            <FiTrendingUp size={14} strokeWidth={1.5} />
             {isBusy ? "Calculating…" : "Calculate score"}
           </button>
         </div>
 
         {successScore ? (
           <div className="grid gap-4">
-            {/* Headline badge */}
+            {/* Headline badge + summary */}
             <div className="flex flex-wrap items-center gap-3">
-              <span className={`rounded-full px-4 py-1.5 text-sm font-black ${
-                successScore.interviewPotential === "High"   ? "bg-teal-100 text-teal-800"  :
-                successScore.interviewPotential === "Medium" ? "bg-amber-100 text-amber-800" :
-                                                               "bg-red-100 text-red-700"
-              }`}>
+              <span
+                className="inline-flex items-center rounded-[4px] px-3 py-1 text-[12px] font-semibold"
+                style={interviewPotentialStyle(successScore.interviewPotential)}
+              >
                 {successScore.interviewPotential} interview potential
               </span>
-              <span className="text-sm font-semibold text-slate-600">{successScore.summary}</span>
+              <span className="text-[13px] text-[#3A3A40]">{successScore.summary}</span>
             </div>
 
             {/* Key metrics */}
-            <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2">
+            <div className="grid grid-cols-4 gap-0 overflow-hidden rounded-[12px] border border-[#E8E3D7] max-lg:grid-cols-2">
               {[
-                { label: "Success score",        value: `${successScore.successScore}%` },
-                { label: "Match score",           value: `${successScore.matchScore}%` },
-                { label: "Skill gaps",            value: successScore.skillGapCount },
-                { label: "Experience alignment",  value: `${successScore.experienceAlignment}%` },
+                { label: "Success score",       value: `${successScore.successScore}%` },
+                { label: "Match score",          value: `${successScore.matchScore}%` },
+                { label: "Skill gaps",           value: successScore.skillGapCount },
+                { label: "Experience alignment", value: `${successScore.experienceAlignment}%` },
               ].map(({ label, value }) => (
                 <div key={label} className={ui.metric}>
                   <span className={ui.metricLabel}>{label}</span>
-                  <strong className="text-2xl font-black leading-none">{value}</strong>
+                  <strong className={ui.metricValue}>{value}</strong>
                 </div>
               ))}
             </div>
 
             {/* Score breakdown */}
             {successScore.breakdown && (
-              <div className="rounded-xl border border-[#d6dee2] bg-[#f8fafc] p-3">
+              <div className="rounded-[8px] border border-[#E8E3D7] bg-[#FBFAF6] p-3">
                 <p className={ui.miniLabel}>Score calculation</p>
-                <div className="grid gap-1 font-mono text-xs text-slate-600">
-                  <span>Base (match score):        +{successScore.breakdown.base}</span>
+                <div className="grid gap-1 text-[12px] text-[#3A3A40]"
+                     style={{ fontFamily: "var(--font-mono)" }}>
+                  <span>Base (match score):       +{successScore.breakdown.base}</span>
                   <span>Skill gap penalty:          {successScore.breakdown.skillGapPenalty}</span>
-                  <span>CV completeness bonus:      +{successScore.breakdown.completenessBonus}</span>
-                  <span>Experience depth bonus:     +{successScore.breakdown.experienceBonus}</span>
-                  <span className="mt-1 border-t border-[#d6dee2] pt-1 font-black text-slate-800">
+                  <span>CV completeness bonus:     +{successScore.breakdown.completenessBonus}</span>
+                  <span>Experience depth bonus:    +{successScore.breakdown.experienceBonus}</span>
+                  <span className="mt-1 border-t border-[#E8E3D7] pt-1 font-medium text-[#0E0E10]">
                     = {successScore.successScore}% success score
                   </span>
                 </div>
@@ -177,9 +216,9 @@ export default function InsightsPage({
                   {successScore.suggestions.map((s) => (
                     <li
                       key={s}
-                      className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900"
+                      className="flex items-start gap-2 rounded-[8px] border border-[#E8E3D7] bg-[#FBFAF6] px-3 py-2 text-[13px] text-[#3A3A40]"
                     >
-                      <span className="mt-0.5 shrink-0">→</span>
+                      <span className="mt-0.5 shrink-0 text-[#1E3FFF]">→</span>
                       {s}
                     </li>
                   ))}
@@ -188,24 +227,48 @@ export default function InsightsPage({
             )}
           </div>
         ) : (
-          <Empty />
+          <Empty msg="No success score yet. Calculate one using your selected CV and top job." />
         )}
       </section>
 
+      {/* ── Missing skill analytics ───────────────────────────────────── */}
       <section className={ui.panel}>
         <div className={ui.sectionHead}>
-          <h2 className="text-2xl font-black">Missing Skill Analytics</h2>
-          <span className={ui.count}>{skillAnalytics?.data?.length || 0} skills</span>
+          <div>
+            <p className={ui.eyebrow}>Skill analytics</p>
+            <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
+              Missing skill frequency
+            </h2>
+          </div>
+          <span className={ui.count} style={{ fontFamily: "var(--font-mono)" }}>
+            {skillAnalytics?.data?.length || 0} skills
+          </span>
         </div>
-        {skillAnalytics?.data?.length ? <AnalyticsBar data={skillAnalytics.data} /> : <Empty />}
+        {skillAnalytics?.data?.length ? (
+          <AnalyticsBar data={skillAnalytics.data} />
+        ) : (
+          <Empty msg="Load analytics to see missing skill frequency." />
+        )}
       </section>
 
+      {/* ── Market trends ─────────────────────────────────────────────── */}
       <section className={ui.panel}>
         <div className={ui.sectionHead}>
-          <h2 className="text-2xl font-black">Market Trends</h2>
-          <span className={ui.count}>{trendAnalytics?.data?.source || "none"}</span>
+          <div>
+            <p className={ui.eyebrow}>Market trends</p>
+            <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
+              Market trends
+            </h2>
+          </div>
+          <span className={ui.count} style={{ fontFamily: "var(--font-mono)" }}>
+            {trendAnalytics?.data?.source || "—"}
+          </span>
         </div>
-        {trendAnalytics?.data ? <TrendSummary data={trendAnalytics.data} /> : <Empty />}
+        {trendAnalytics?.data ? (
+          <TrendSummary data={trendAnalytics.data} />
+        ) : (
+          <Empty msg="Load analytics to see market trends." />
+        )}
       </section>
     </div>
   );

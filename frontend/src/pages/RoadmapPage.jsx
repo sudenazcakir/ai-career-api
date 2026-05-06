@@ -1,5 +1,6 @@
-import { FiZap } from "react-icons/fi";
-import { Empty } from "../components/shared";
+import { useNavigate } from "react-router-dom";
+import { FiRefreshCw, FiTarget, FiZap } from "react-icons/fi";
+import { ui } from "../styles/ui";
 import { buildSkillGaps } from "./SkillGapPage";
 
 const STAGE_STEPS = {
@@ -20,6 +21,7 @@ export default function RoadmapPage({
   analysisResult,
   matchResult,
 }) {
+  const navigate   = useNavigate();
   const allJobs    = [...jobs, ...recommendations].filter((j) => j?._id);
   const uniqueJobs = [...new Map(allJobs.map((j) => [j._id, j])).values()];
   const gaps       = buildSkillGaps(uniqueJobs, selectedCv?.skills);
@@ -34,72 +36,135 @@ export default function RoadmapPage({
   }));
 
   const apiRoadmap = analysisResult?.roadmap || [];
+  const hasStages  = stages.length > 0;
+  const hasApi     = apiRoadmap.length > 0;
 
   return (
-    <div className="grid gap-5">
-      <section className="overflow-hidden rounded-2xl border border-teal-200/25 bg-[radial-gradient(circle_at_18%_20%,rgba(20,184,166,0.18),transparent_30%),linear-gradient(135deg,#0f172a,#12343b_52%,#111827)] p-6 text-white shadow-2xl">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="mb-2 text-xs font-black uppercase tracking-normal text-teal-300">
-              Growth
-            </p>
-            <h2 className="text-[clamp(32px,5vw,54px)] font-black leading-none">
-              Your learning roadmap
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300">
-              Generated from your top skill gaps. Each milestone unlocks more jobs.
-            </p>
-          </div>
-          {matchResult?.missingSkills?.length > 0 && (
-            <button
-              type="button"
-              className="!bg-white !text-slate-950 hover:!bg-teal-100 shrink-0"
-              onClick={analyzeGaps}
-            >
-              <FiZap style={{ display: "inline", marginRight: 6 }} />
-              Refresh from AI
+    <div className="grid gap-[18px]">
+
+      {/* ── Page header ──────────────────────────────────────────────── */}
+      <section className={`${ui.heroPanel} lat-dot-grid`}>
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute", right: 24, bottom: -48,
+            fontFamily: "var(--font-display)",
+            fontSize: 200, lineHeight: 1,
+            color: "var(--c-mist)", opacity: 0.28,
+            letterSpacing: "-0.02em", pointerEvents: "none", userSelect: "none",
+          }}
+        >
+          {stages.length || "—"}
+        </span>
+        <div className="relative min-w-0">
+          <p className={ui.eyebrow}>Growth · Growth Plan</p>
+          <h2 style={{
+            fontFamily: "var(--font-display)",
+            fontSize: "clamp(28px,3.5vw,46px)",
+            fontWeight: 400, lineHeight: 1.02,
+            letterSpacing: "-0.02em", color: "var(--c-ink)",
+            maxWidth: 560, marginTop: 8,
+          }}>
+            Your learning <em style={{ fontStyle: "italic" }}>roadmap.</em>
+          </h2>
+          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-[#3A3A40]">
+            Generated from your top skill gaps. Each milestone unlocks more jobs.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2.5">
+            {matchResult?.missingSkills?.length > 0 && (
+              <button className={ui.buttonCobalt} type="button" onClick={analyzeGaps}>
+                <FiRefreshCw size={14} strokeWidth={1.5} />
+                Refresh from AI
+              </button>
+            )}
+            <button className={ui.buttonSecondary} type="button" onClick={analyzeGaps}>
+              <FiZap size={14} strokeWidth={1.5} />
+              Analyse gaps
             </button>
-          )}
+          </div>
         </div>
       </section>
 
-      {stages.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-          <p className="text-slate-500">
-            Load jobs and select a CV to generate your personalised roadmap.
-          </p>
-        </div>
+      {/* ── Empty state ───────────────────────────────────────────────── */}
+      {!hasStages && !hasApi && (
+        <section className={ui.panel}>
+          <div className="py-4 text-center">
+            <p className="text-[13px] text-[#6B6B72]">
+              {uniqueJobs.length === 0
+                ? "No jobs loaded yet. Import jobs then select a CV to generate your personalised roadmap."
+                : "Select a CV to compare against your loaded jobs and generate a growth plan."}
+            </p>
+            <div className="mt-4 flex justify-center gap-2.5">
+              <button className={ui.buttonCobalt} type="button" onClick={() => navigate("/skill-gaps")}>
+                <FiTarget size={14} strokeWidth={1.5} />
+                Back to Skill Map
+              </button>
+              <button className={ui.buttonSecondary} type="button" onClick={analyzeGaps}>
+                <FiZap size={14} strokeWidth={1.5} />
+                Analyse gaps
+              </button>
+            </div>
+          </div>
+        </section>
       )}
 
-      {stages.length > 0 && (
-        <div className="grid gap-5">
+      {/* ── Milestone cards ───────────────────────────────────────────── */}
+      {hasStages && (
+        <div className="grid gap-[18px]">
           {stages.map((stage, idx) => (
-            <section
-              key={stage.id}
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-            >
-              <div className="mb-4 flex items-start gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-100 text-sm font-black text-teal-800">
+            <section key={stage.id} className={ui.panel}>
+              {/* Milestone header */}
+              <div className="mb-5 flex items-start gap-4">
+                {/* Step circle */}
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-[#F6F3EC]"
+                  style={{
+                    background: "var(--c-cobalt)",
+                    fontFamily: "var(--font-mono)",
+                    minWidth: 36,
+                  }}
+                >
                   {idx + 1}
                 </div>
-                <div>
-                  <p className="text-xs font-black uppercase tracking-normal text-teal-700">
-                    {stage.label} · {stage.freq} job{stage.freq !== 1 ? "s" : ""} require this
-                  </p>
-                  <h3 className="text-2xl font-black text-slate-950">{stage.skill}</h3>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Timeline badge */}
+                    <span
+                      className="inline-flex items-center rounded-[4px] bg-[#E6EBFF] px-2 py-0.5 text-[10px] font-medium text-[#1E3FFF]"
+                      style={{ fontFamily: "var(--font-mono)" }}
+                    >
+                      {stage.label}
+                    </span>
+                    {/* Frequency badge */}
+                    <span
+                      className="inline-flex items-center rounded-[4px] bg-[#EFE5F8] px-2 py-0.5 text-[10px] font-medium text-[#5B2A86]"
+                      style={{ fontFamily: "var(--font-mono)" }}
+                    >
+                      {stage.freq} job{stage.freq !== 1 ? "s" : ""} require this
+                    </span>
+                  </div>
+                  <h3
+                    className="mt-1 text-[20px] font-semibold tracking-[-0.01em] text-[#0E0E10]"
+                  >
+                    {stage.skill}
+                  </h3>
                 </div>
               </div>
 
-              <div className="grid gap-3">
+              {/* Learning steps */}
+              <div className="grid gap-2">
                 {stage.steps.map((step, stepIdx) => (
                   <div
                     key={step}
-                    className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"
+                    className="flex items-center gap-3 rounded-[8px] border border-[#E8E3D7] bg-[#F6F3EC] px-4 py-3"
                   >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 text-xs font-black text-slate-400">
+                    <span
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#E8E3D7] text-[10px] font-medium text-[#6B6B72]"
+                      style={{ fontFamily: "var(--font-mono)", minWidth: 20 }}
+                    >
                       {stepIdx + 1}
                     </span>
-                    <span className="text-sm font-semibold text-slate-700">{step}</span>
+                    <span className="text-[13px] text-[#3A3A40]">{step}</span>
                   </div>
                 ))}
               </div>
@@ -108,22 +173,37 @@ export default function RoadmapPage({
         </div>
       )}
 
-      {apiRoadmap.length > 0 && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="mb-1 text-xs font-black uppercase tracking-normal text-teal-700">
-            AI-generated roadmap
-          </p>
-          <h3 className="mb-4 text-xl font-black text-slate-950">Personalised steps</h3>
-          <div className="grid gap-3">
+      {/* ── AI-generated roadmap ──────────────────────────────────────── */}
+      {hasApi && (
+        <section className={ui.panel}>
+          <div className={ui.sectionHead}>
+            <div>
+              <p className={ui.eyebrow}>AI-generated roadmap</p>
+              <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
+                Personalised steps
+              </h2>
+            </div>
+            <span
+              className={ui.count}
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              {apiRoadmap.length} steps
+            </span>
+          </div>
+
+          <div className="grid gap-2">
             {apiRoadmap.map((item, index) => (
               <div
                 key={item}
-                className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"
+                className="flex items-start gap-3 rounded-[8px] border-l-2 border-[#1E3FFF] bg-[#FBFAF6] px-4 py-3"
               >
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-100 text-xs font-black text-teal-800">
-                  {index + 1}
+                <span
+                  className="mt-0.5 shrink-0 text-[10px] font-medium text-[#1E3FFF]"
+                  style={{ fontFamily: "var(--font-mono)", minWidth: 20 }}
+                >
+                  {String(index + 1).padStart(2, "0")}
                 </span>
-                <p className="text-sm text-slate-700">{item}</p>
+                <p className="text-[13px] leading-relaxed text-[#3A3A40]">{item}</p>
               </div>
             ))}
           </div>

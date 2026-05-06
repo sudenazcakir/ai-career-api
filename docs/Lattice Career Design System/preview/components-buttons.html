@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Buttons</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { padding: 20px; display: grid; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.label { font: 500 11px/1 var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--fg-3); width: 100%; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 40px; padding: 0 16px;
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  font: 500 14px/1 var(--font-sans);
+  cursor: default;
+  transition: background var(--dur-1) var(--ease-standard);
+}
+.btn-primary   { background: var(--c-ink); color: var(--c-bone); }
+.btn-secondary { background: var(--c-paper); color: var(--c-ink); border-color: var(--border-1); }
+.btn-cobalt    { background: var(--c-cobalt); color: var(--c-bone); }
+.btn-ghost     { background: transparent; color: var(--c-ink); }
+.btn-ghost:hover { background: #EFEBE0; }
+.btn-danger    { background: var(--c-danger-50); color: var(--c-danger); }
+.btn-sm { height: 32px; padding: 0 12px; font-size: 13px; }
+</style></head>
+<body>
+<div class="row">
+  <span class="label">Primary actions · 40px</span>
+  <button class="btn btn-primary">Save CV</button>
+  <button class="btn btn-cobalt">Rank now</button>
+  <button class="btn btn-secondary">Cancel</button>
+  <button class="btn btn-ghost">Skip</button>
+  <button class="btn btn-danger">Delete</button>
+</div>
+<div class="row">
+  <span class="label">Compact · 32px</span>
+  <button class="btn btn-primary btn-sm">Import jobs</button>
+  <button class="btn btn-secondary btn-sm">Filter</button>
+  <button class="btn btn-ghost btn-sm">Manage</button>
+</div>
+</body></html>

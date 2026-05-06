@@ -13,25 +13,38 @@ import { Empty, Metric, ScoreBadge } from "../common/DataViews";
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Legend, Tooltip);
 
-// ─── Breakdown bar (skill / experience / role) ────────────────────────────
-function BreakdownBar({ label, score, color = "bg-teal-700" }) {
+/* Lattice chart palette — Cobalt-first, then Ink/Slate/Plum/Warning/Success */
+const CHART_COLORS = ["#1E3FFF", "#0E0E10", "#6B6B72", "#5B2A86", "#9A6712", "#0E7C4A"];
+
+/* ── Breakdown bar (skill / experience / role) ───────────────────────────── */
+function BreakdownBar({ label, score, color = "var(--c-cobalt)" }) {
   return (
     <div className="grid gap-1">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-bold text-slate-500">{label}</span>
-        <span className="text-xs font-black text-slate-700">{score}%</span>
+        <span
+          className="text-[10px] font-medium uppercase tracking-[0.04em] text-[#6B6B72]"
+          style={{ fontFamily: "var(--font-mono)" }}
+        >
+          {label}
+        </span>
+        <span
+          className="text-[11px] font-medium text-[#3A3A40]"
+          style={{ fontFamily: "var(--font-mono)" }}
+        >
+          {score}%
+        </span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+      <div className="h-[4px] w-full overflow-hidden rounded-[2px] bg-[#E8E3D7]">
         <div
-          className={`h-full rounded-full transition-all duration-500 ${color}`}
-          style={{ width: `${Math.min(score, 100)}%` }}
+          className="h-full rounded-[2px] transition-all"
+          style={{ width: `${Math.min(score, 100)}%`, background: color }}
         />
       </div>
     </div>
   );
 }
 
-// ─── MatchExplanation ─────────────────────────────────────────────────────
+/* ── MatchExplanation ────────────────────────────────────────────────────── */
 export function MatchExplanation({ result }) {
   const breakdown = result.breakdown;
 
@@ -50,31 +63,30 @@ export function MatchExplanation({ result }) {
 
       {/* Breakdown bars */}
       {breakdown && (
-        <div className="grid gap-2 rounded-xl border border-[#d6dee2] bg-[#f8fafc] p-3">
+        <div className="grid gap-2.5 rounded-[8px] border border-[#E8E3D7] bg-[#FBFAF6] p-3">
           <p className={ui.miniLabel}>Score breakdown</p>
-          <BreakdownBar label={`Skill coverage (60%)`}       score={breakdown.skillScore}      color="bg-teal-700" />
-          <BreakdownBar label={`Experience alignment (25%)`} score={breakdown.experienceScore} color="bg-slate-700" />
-          <BreakdownBar label={`Role fit (15%)`}             score={breakdown.roleScore}       color="bg-indigo-600" />
+          <BreakdownBar label="Skill coverage (60%)"       score={breakdown.skillScore}      color="var(--c-ink)" />
+          <BreakdownBar label="Experience alignment (25%)" score={breakdown.experienceScore} color="var(--c-cobalt)" />
+          <BreakdownBar label="Role fit (15%)"             score={breakdown.roleScore}       color="var(--c-slate)" />
           {breakdown.experienceDetail && (
-            <p className="mt-1 text-xs text-slate-500">{breakdown.experienceDetail}</p>
+            <p className="mt-1 text-[12px] text-[#6B6B72]">{breakdown.experienceDetail}</p>
           )}
           {breakdown.roleDetail && (
-            <p className="text-xs text-slate-500">{breakdown.roleDetail}</p>
+            <p className="text-[12px] text-[#6B6B72]">{breakdown.roleDetail}</p>
           )}
         </div>
       )}
 
       {/* Skill chips */}
-      <SkillBlock label="Matched skills"  skills={result.matchingSkills || result.matchedSkills}  tone="good" />
-      <SkillBlock label="Partial matches" skills={result.partialSkills}  tone="warn" />
-      <SkillBlock label="Missing skills"  skills={result.missingSkills}  tone="warning" />
+      <SkillBlock label="Matched skills"  skills={result.matchingSkills || result.matchedSkills} tone="matched" />
+      <SkillBlock label="Partial matches" skills={result.partialSkills}  tone="partial" />
+      <SkillBlock label="Missing skills"  skills={result.missingSkills}  tone="missing" />
     </div>
   );
 }
 
-// ─── BestCvResult ─────────────────────────────────────────────────────────
+/* ── BestCvResult ────────────────────────────────────────────────────────── */
 export function BestCvResult({ result }) {
-  // Support both old shape (bestCv/score) and new shape (cv/matchScore/reason/breakdown)
   const cv        = result.cv || result.bestCv;
   const matchScore = result.matchScore ?? result.score;
   const reason    = result.reason || result.explanation;
@@ -89,52 +101,52 @@ export function BestCvResult({ result }) {
       <div className={ui.sectionHead}>
         <div>
           <p className={ui.eyebrow}>Best match</p>
-          <h3 className="min-w-0 wrap-break-word text-xl font-black">{cv.title}</h3>
-          {reason && <p className="mt-1 text-sm text-slate-500">{reason}</p>}
+          <h3 className="text-[17px] font-semibold tracking-[-0.01em] text-[#0E0E10]">
+            {cv.title}
+          </h3>
+          {reason && <p className="mt-1 text-[13px] text-[#6B6B72]">{reason}</p>}
         </div>
         <ScoreBadge value={matchScore} />
       </div>
 
       {breakdown && (
-        <div className="grid gap-2 rounded-xl border border-[#d6dee2] bg-[#f8fafc] p-3">
+        <div className="grid gap-2.5 rounded-[8px] border border-[#E8E3D7] bg-[#FBFAF6] p-3">
           <p className={ui.miniLabel}>Score breakdown</p>
-          <BreakdownBar label="Skill coverage (60%)"       score={breakdown.skillScore}      color="bg-teal-700" />
-          <BreakdownBar label="Experience alignment (25%)" score={breakdown.experienceScore} color="bg-slate-700" />
-          <BreakdownBar label="Role fit (15%)"             score={breakdown.roleScore}       color="bg-indigo-600" />
+          <BreakdownBar label="Skill coverage (60%)"       score={breakdown.skillScore}      color="var(--c-ink)" />
+          <BreakdownBar label="Experience alignment (25%)" score={breakdown.experienceScore} color="var(--c-cobalt)" />
+          <BreakdownBar label="Role fit (15%)"             score={breakdown.roleScore}       color="var(--c-slate)" />
         </div>
       )}
 
-      <SkillBlock label="CV skills" skills={cv.skills || []} />
+      <SkillBlock label="CV skills" skills={cv.skills || []} tone="neutral" />
     </div>
   );
 }
 
-// ─── SkillBlock ───────────────────────────────────────────────────────────
+/* ── SkillBlock ──────────────────────────────────────────────────────────── */
 export function SkillBlock({ label, skills = [], tone = "neutral" }) {
   if (!skills || !skills.length) return null;
 
-  const toneClass = {
-    good:    "bg-teal-100 text-teal-800",
-    warn:    "bg-amber-100 text-amber-800",
-    warning: "bg-red-100 text-red-800",
-    neutral: "",
-  }[tone] || "";
+  const chipClass = {
+    matched: ui.chipMatched,
+    partial: ui.chipPartial,
+    missing: ui.chipMissing,
+    neutral: ui.chip,
+  }[tone] ?? ui.chip;
 
   return (
     <div>
       <p className={ui.miniLabel}>{label}</p>
       <div className={ui.chips}>
         {skills.map((skill) => (
-          <span className={`${ui.chip} ${toneClass}`} key={skill}>
-            {skill}
-          </span>
+          <span className={chipClass} key={skill}>{skill}</span>
         ))}
       </div>
     </div>
   );
 }
 
-// ─── AnalyticsBar ─────────────────────────────────────────────────────────
+/* ── AnalyticsBar ────────────────────────────────────────────────────────── */
 export function AnalyticsBar({ data }) {
   const chartData = {
     labels: data.map((item) => item.skill),
@@ -142,8 +154,8 @@ export function AnalyticsBar({ data }) {
       {
         label: "Missing count",
         data: data.map((item) => item.missingCount),
-        backgroundColor: "#0f766e",
-        borderRadius: 6,
+        backgroundColor: "#1E3FFF",
+        borderRadius: 4,
       },
     ],
   };
@@ -157,12 +169,12 @@ export function AnalyticsBar({ data }) {
           maintainAspectRatio: false,
           plugins: {
             legend: {
-              labels: { boxWidth: 14, color: "#475569", font: { size: 11 } },
+              labels: { boxWidth: 12, color: "#6B6B72", font: { size: 11 } },
             },
           },
           scales: {
-            x: { ticks: { color: "#475569", maxRotation: 35, minRotation: 0 } },
-            y: { beginAtZero: true, ticks: { precision: 0 } },
+            x: { ticks: { color: "#6B6B72", maxRotation: 35, minRotation: 0 } },
+            y: { beginAtZero: true, ticks: { precision: 0, color: "#6B6B72" } },
           },
         }}
       />
@@ -170,7 +182,7 @@ export function AnalyticsBar({ data }) {
   );
 }
 
-// ─── TrendSummary ─────────────────────────────────────────────────────────
+/* ── TrendSummary ────────────────────────────────────────────────────────── */
 export function TrendSummary({ data }) {
   const categories = data.categories?.slice(0, 6) || [];
   const chartData = {
@@ -178,7 +190,8 @@ export function TrendSummary({ data }) {
     datasets: [
       {
         data: categories.map((item) => item.count),
-        backgroundColor: ["#0f766e", "#334155", "#2563eb", "#d97706", "#7c3aed", "#64748b"],
+        backgroundColor: CHART_COLORS,
+        borderWidth: 0,
       },
     ],
   };
@@ -200,7 +213,12 @@ export function TrendSummary({ data }) {
               plugins: {
                 legend: {
                   position: "bottom",
-                  labels: { boxWidth: 12, color: "#475569", font: { size: 11 }, padding: 10 },
+                  labels: {
+                    boxWidth: 10,
+                    color: "#6B6B72",
+                    font: { size: 11 },
+                    padding: 10,
+                  },
                 },
               },
             }}

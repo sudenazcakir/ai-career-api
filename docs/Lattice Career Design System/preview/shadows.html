@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Shadows &amp; elevation</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { padding: 28px 22px; }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.cell { display: grid; gap: 10px; justify-items: center; }
+.box { width: 100%; height: 64px; background: var(--c-paper); border: 1px solid var(--border-1); border-radius: var(--radius-lg); }
+.box.sm { box-shadow: var(--shadow-sm); }
+.box.md { box-shadow: var(--shadow-md); }
+.box.lg { box-shadow: var(--shadow-lg); }
+.t { font: 500 12px/1.2 var(--font-sans); color: var(--fg-1); }
+.v { font: 400 11px/1.2 var(--font-mono); color: var(--fg-3); text-align: center; }
+</style></head>
+<body>
+<div class="grid">
+  <div class="cell"><div class="box sm"></div><span class="t">sm</span><span class="v">card hover</span></div>
+  <div class="cell"><div class="box md"></div><span class="t">md</span><span class="v">menu, dropdown</span></div>
+  <div class="cell"><div class="box lg"></div><span class="t">lg</span><span class="v">modal, sheet</span></div>
+</div>
+</body></html>

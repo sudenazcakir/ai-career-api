@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Color · semantic</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { padding: 16px; }
+.list { display: grid; gap: 8px; }
+.row { display: grid; grid-template-columns: 110px 1fr 100px; gap: 8px; align-items: stretch; }
+.label { font: 500 13px/1.4 var(--font-sans); color: var(--fg-1); align-self: center; }
+.surface { border-radius: var(--radius-md); padding: 10px 12px; border: 1px solid var(--border-1); display: grid; align-content: center; }
+.surface .pill { display: inline-flex; align-items: center; gap: 6px; align-self: start; }
+.surface .pill::before { content: ''; width: 8px; height: 8px; border-radius: 999px; background: currentColor; }
+.surface .t { font: 500 13px/1 var(--font-sans); }
+.hex { font: 400 11px/1 var(--font-mono); color: var(--fg-3); align-self: center; text-align: right; }
+</style></head>
+<body>
+<div class="list">
+  <div class="row"><span class="label">Success</span><div class="surface" style="background:#E5F4EC;color:#0E7C4A"><span class="pill"><span class="t">Accepted</span></span></div><span class="hex">#0E7C4A</span></div>
+  <div class="row"><span class="label">Warning</span><div class="surface" style="background:#FBF1DA;color:#9A6712"><span class="pill"><span class="t">Under Review</span></span></div><span class="hex">#9A6712</span></div>
+  <div class="row"><span class="label">Danger</span> <div class="surface" style="background:#FBE8E5;color:#A6261A"><span class="pill"><span class="t">Rejected</span></span></div><span class="hex">#A6261A</span></div>
+  <div class="row"><span class="label">Info</span>    <div class="surface" style="background:#E6EBFF;color:#1E3FFF"><span class="pill"><span class="t">Saved for Later</span></span></div><span class="hex">#1E3FFF</span></div>
+</div>
+</body></html>

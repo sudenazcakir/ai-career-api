@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Radii</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { padding: 18px; }
+.grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.cell { display: grid; gap: 6px; justify-items: center; align-content: start; }
+.shape { width: 64px; height: 64px; background: var(--c-paper); border: 1px solid var(--border-1); }
+.r-sm { border-radius: 4px; } .r-md { border-radius: 8px; } .r-lg { border-radius: 12px; }
+.r-xl { border-radius: 20px; } .r-full { border-radius: 999px; }
+.t { font: 500 11px/1.2 var(--font-sans); color: var(--fg-1); text-align: center; }
+.v { font: 400 10px/1.2 var(--font-mono); color: var(--fg-3); text-align: center; }
+</style></head>
+<body>
+<div class="grid">
+  <div class="cell"><div class="shape r-sm"></div><span class="t">sm</span><span class="v">4 · chips</span></div>
+  <div class="cell"><div class="shape r-md"></div><span class="t">md</span><span class="v">8 · button, input</span></div>
+  <div class="cell"><div class="shape r-lg"></div><span class="t">lg</span><span class="v">12 · card</span></div>
+  <div class="cell"><div class="shape r-xl"></div><span class="t">xl</span><span class="v">20 · modal, hero</span></div>
+  <div class="cell"><div class="shape r-full"></div><span class="t">full</span><span class="v">999 · avatar</span></div>
+</div>
+</body></html>

@@ -1,7 +1,7 @@
 import FieldError from "../components/common/FieldError";
 import PhoneField from "../components/forms/PhoneField";
 import { FiAlertCircle } from "react-icons/fi";
-import { authBg } from "../styles/ui";
+import { ui } from "../styles/ui";
 import { normalizePhoneNumber } from "../utils/validation";
 
 export default function AuthPage({
@@ -27,195 +27,249 @@ export default function AuthPage({
   const visibleStatus = status && status !== "System ready" && !hasInlineError;
 
   return (
-    <main className={`relative min-h-screen min-w-0 overflow-hidden text-white lg:flex ${authBg}`}>
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,6,23,0.28),rgba(2,6,23,0.1)_45%,rgba(2,6,23,0.26))]" />
+    <main className="flex min-h-screen min-w-0 overflow-hidden" style={{ background: "var(--c-bone)" }}>
 
-      <section className="relative hidden min-h-screen w-[50%] min-w-0 shrink-0 flex-col px-[5vw] py-[clamp(46px,7vh,76px)] lg:flex">
-        <div className="max-w-[600px]">
-          <p className="mb-4 text-xs font-black uppercase text-teal-100">
-            AI Career OS
+      {/* ── Left panel: editorial / dotted grid ─────────────────────── */}
+      <section
+        className="lat-dot-grid relative hidden min-h-screen w-[52%] shrink-0 flex-col overflow-hidden px-14 py-12 lg:flex"
+        style={{ borderRight: "1px solid var(--c-hairline)" }}
+      >
+        {/* Brand mark */}
+        <div className="flex items-center gap-2.5">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <rect x="1" y="1" width="8" height="8" fill="#0E0E10"/>
+            <rect x="11" y="1" width="8" height="8" fill="none" stroke="#E8E3D7" strokeWidth="1.2"/>
+            <rect x="1" y="11" width="8" height="8" fill="none" stroke="#E8E3D7" strokeWidth="1.2"/>
+            <rect x="11" y="11" width="8" height="8" fill="#0E0E10"/>
+          </svg>
+          <strong style={{ fontFamily: "var(--font-sans)", fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--c-ink)" }}>
+            Lattice
+          </strong>
+        </div>
+
+        {/* Headline */}
+        <div className="mt-16 mb-12 max-w-[480px]">
+          <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.08em] text-[#6B6B72]"
+             style={{ fontFamily: "var(--font-mono)" }}>
+            Career Operating System
           </p>
-          <h1 className="max-w-[560px] text-balance text-[clamp(40px,4.6vw,62px)] font-black leading-[1.08]">
-            Build a smarter career profile.
+          <h1 style={{
+            fontFamily: "var(--font-display)",
+            fontSize: "clamp(44px,5vw,72px)",
+            fontWeight: 400,
+            lineHeight: 0.97,
+            letterSpacing: "-0.02em",
+            color: "var(--c-ink)",
+            margin: 0,
+          }}>
+            <em style={{ fontStyle: "italic" }}>A career,</em>
+            <br />cell by cell.
           </h1>
-          <p className="mt-6 max-w-[520px] text-pretty text-[17px] font-semibold leading-8 text-teal-50/88">
-            Create your Career Passport once, then match it with live job data,
-            recommendations, and skill roadmaps.
+          <p className="mt-5 max-w-[420px] text-[15px] leading-relaxed text-[#3A3A40]">
+            Build a Career Passport once. Match it against live roles, surface
+            skill gaps, and walk a roadmap that opens more doors with each milestone.
           </p>
         </div>
 
-        <div className="mt-auto grid max-w-[520px] grid-cols-3 gap-3 pb-2">
-          {["Profile", "Matches", "Roadmap"].map((item) => (
+        {/* Feature trio */}
+        <div className="grid max-w-[420px] grid-cols-3 gap-3">
+          {[["01", "Profile"], ["02", "Matches"], ["03", "Roadmap"]].map(([n, l]) => (
             <div
-              className="border-t border-white/30 pt-3 text-xs font-black uppercase text-white/80"
-              key={item}
+              key={n}
+              className="rounded-[8px] border border-[#E8E3D7] bg-[#FBFAF6] p-3.5"
             >
-              {item}
+              <p className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B6B72]"
+                 style={{ fontFamily: "var(--font-mono)" }}>
+                {n}
+              </p>
+              <strong className="text-[14px] font-semibold text-[#0E0E10]">{l}</strong>
             </div>
           ))}
         </div>
+
+        {/* Decorative numeral */}
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            right: 28,
+            bottom: -100,
+            fontFamily: "var(--font-display)",
+            fontSize: 320,
+            lineHeight: 1,
+            color: "var(--c-mist)",
+            opacity: 0.28,
+            letterSpacing: "-0.02em",
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        >
+          86
+        </span>
       </section>
 
-      <section className="relative ml-auto grid h-screen w-[50%] min-w-0 items-center justify-items-center overflow-hidden border-l border-white/10 bg-slate-950/24 px-10 py-[clamp(22px,4.6vh,46px)] shadow-2xl backdrop-blur-sm max-lg:w-full max-lg:bg-slate-950/48 max-sm:px-5 lg:ml-0">
-        <div className="w-full max-w-[470px]">
-            <div className="mb-5 text-center">
-              <p className="mb-2 text-xs font-black uppercase text-teal-200 lg:hidden">
-                AI Career OS
-              </p>
-              <h2 className="text-[clamp(30px,4vw,42px)] font-black leading-tight">
-                {isRegister ? "Create account" : "Welcome back"}
-              </h2>
-              <p className="mt-2 text-sm font-semibold text-white/55">
-                {isRegister
-                  ? "Enter your details to build your career profile."
-                  : "Please enter your details."}
-              </p>
-            </div>
+      {/* ── Right panel: form ────────────────────────────────────────── */}
+      <section
+        className="flex flex-1 items-center justify-center px-8 py-12 max-sm:px-5"
+        style={{ background: "var(--c-paper)" }}
+      >
+        <div className="w-full max-w-[400px]">
 
-            <div className="mb-5 grid grid-cols-2 gap-2 rounded-full border border-white/10 bg-white/5 p-1">
+          {/* Mobile brand */}
+          <p className="mb-5 flex items-center gap-2 text-[13px] font-semibold text-[#0E0E10] lg:hidden">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <rect x="1" y="1" width="8" height="8" fill="#0E0E10"/>
+              <rect x="11" y="1" width="8" height="8" fill="none" stroke="#E8E3D7" strokeWidth="1.5"/>
+              <rect x="1" y="11" width="8" height="8" fill="none" stroke="#E8E3D7" strokeWidth="1.5"/>
+              <rect x="11" y="11" width="8" height="8" fill="#0E0E10"/>
+            </svg>
+            Lattice
+          </p>
+
+          <h2 style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 42,
+            fontWeight: 400,
+            letterSpacing: "-0.02em",
+            color: "var(--c-ink)",
+            lineHeight: 1,
+            marginBottom: 6,
+          }}>
+            {isRegister ? "Create account." : "Welcome back."}
+          </h2>
+          <p className="mb-6 text-[13px] text-[#6B6B72]">
+            {isRegister
+              ? "Set up your profile in under a minute."
+              : "Sign in to continue your career match."}
+          </p>
+
+          {/* Toggle */}
+          <div
+            className="mb-5 grid grid-cols-2 rounded-[8px] p-[3px]"
+            style={{ background: "var(--c-bone)", border: "1px solid var(--c-hairline)" }}
+          >
+            {[
+              { label: "Sign up", mode: "register" },
+              { label: "Sign in", mode: "login" },
+            ].map(({ label, mode }) => (
               <button
-                className={`min-h-11 rounded-full text-sm font-black transition ${
-                  isRegister
-                    ? "bg-white text-slate-950 shadow-lg"
-                    : "text-white/65 hover:bg-white/10 hover:text-white"
-                }`}
+                key={mode}
                 type="button"
-                onClick={() => {
-                  setAuthMode("register");
-                  setAuthErrors({});
-                }}
+                className="h-8 rounded-[6px] text-[12px] font-medium transition-colors"
+                style={(() => {
+                  const isActive = isRegister ? mode === "register" : mode === "login";
+                  return isActive
+                    ? { background: "var(--c-paper)", color: "var(--c-ink)", boxShadow: "var(--shadow-sm)" }
+                    : { background: "transparent", color: "var(--c-slate)" };
+                })()}
+                onClick={() => { setAuthMode(mode); setAuthErrors({}); }}
               >
-                Sign Up
+                {label}
               </button>
-              <button
-                className={`min-h-11 rounded-full text-sm font-black transition ${
-                  !isRegister
-                    ? "bg-white text-slate-950 shadow-lg"
-                    : "text-white/65 hover:bg-white/10 hover:text-white"
-                }`}
-                type="button"
-                onClick={() => {
-                  setAuthMode("login");
-                  setAuthErrors({});
-                }}
-              >
-                Sign In
-              </button>
-            </div>
-
-            <form className="grid gap-4" noValidate onSubmit={submitAuth}>
-              {isRegister && (
-                <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
-                  <label className="grid gap-2 text-sm font-black text-white">
-                    First name
-                    <input
-                      className="min-h-11 border-0 border-b border-white/20 bg-transparent px-0 text-base font-semibold text-white outline-none placeholder:text-white/35 focus:border-teal-200"
-                      placeholder="First name"
-                      value={authForm.firstName}
-                      onChange={(event) =>
-                        setAuthForm({ ...authForm, firstName: event.target.value })
-                      }
-                    />
-                    <FieldError message={authErrors.firstName} />
-                  </label>
-                  <label className="grid gap-2 text-sm font-black text-white">
-                    Last name
-                    <input
-                      className="min-h-11 border-0 border-b border-white/20 bg-transparent px-0 text-base font-semibold text-white outline-none placeholder:text-white/35 focus:border-teal-200"
-                      placeholder="Last name"
-                      value={authForm.lastName}
-                      onChange={(event) =>
-                        setAuthForm({ ...authForm, lastName: event.target.value })
-                      }
-                    />
-                    <FieldError message={authErrors.lastName} />
-                  </label>
-                </div>
-              )}
-
-              <label className="grid gap-2 text-sm font-black text-white">
-                Email
-                <input
-                  className="min-h-11 border-0 border-b border-white/20 bg-transparent px-0 text-base font-semibold text-white outline-none placeholder:text-white/35 focus:border-teal-200"
-                  inputMode="email"
-                  placeholder="name@example.com"
-                  type="text"
-                  value={authForm.email}
-                  onChange={(event) =>
-                    setAuthForm({ ...authForm, email: event.target.value })
-                  }
-                />
-                <FieldError message={authErrors.email} />
-              </label>
-
-              {isRegister && (
-                <PhoneField
-                  countryCode={authForm.countryCode}
-                  phoneNumber={authForm.phoneNumber}
-                  setCountryCode={(countryCode) =>
-                    setAuthForm({ ...authForm, countryCode })
-                  }
-                  setPhoneNumber={(phoneNumber) =>
-                    setAuthForm({
-                      ...authForm,
-                      phoneNumber: normalizePhoneNumber(phoneNumber),
-                    })
-                  }
-                  error={authErrors.phone}
-                  variant="darkCompact"
-                />
-              )}
-
-              <label className="grid gap-2 text-sm font-black text-white">
-                Password
-                <input
-                  className="min-h-11 border-0 border-b border-white/20 bg-transparent px-0 text-base font-semibold text-white outline-none placeholder:text-white/35 focus:border-teal-200"
-                  placeholder="Password"
-                  type="password"
-                  value={authForm.password}
-                  onChange={(event) =>
-                    setAuthForm({ ...authForm, password: event.target.value })
-                  }
-                />
-                <FieldError message={authErrors.password} />
-              </label>
-
-              {isRegister && (
-                <label className="grid gap-2 text-sm font-black text-white">
-                  Confirm password
-                  <input
-                    className="min-h-11 border-0 border-b border-white/20 bg-transparent px-0 text-base font-semibold text-white outline-none placeholder:text-white/35 focus:border-teal-200"
-                    placeholder="Repeat password"
-                    type="password"
-                    value={authForm.confirmPassword}
-                    onChange={(event) =>
-                      setAuthForm({
-                        ...authForm,
-                        confirmPassword: event.target.value,
-                      })
-                    }
-                  />
-                  <FieldError message={authErrors.confirmPassword} />
-                </label>
-              )}
-
-              <button
-                className="mt-3 min-h-[52px] rounded-xl bg-black px-4 py-3 text-base font-black text-white shadow-xl transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isBusy}
-                formNoValidate
-                type="submit"
-              >
-                {isBusy ? "Please wait..." : isRegister ? "Create Account" : "Sign In"}
-              </button>
-            </form>
-
-            {visibleStatus && (
-              <p className="pointer-events-none absolute bottom-8 left-10 right-10 flex min-w-0 items-center justify-center gap-2 break-words text-center text-sm font-medium text-white max-sm:left-5 max-sm:right-5">
-                <FiAlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {status}
-              </p>
-            )}
+            ))}
           </div>
+
+          {/* Form */}
+          <form className="grid gap-3.5" noValidate onSubmit={submitAuth}>
+            {isRegister && (
+              <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+                <label className={ui.label}>
+                  First name
+                  <input
+                    className={ui.input}
+                    placeholder="Ada"
+                    value={authForm.firstName}
+                    onChange={(e) => setAuthForm({ ...authForm, firstName: e.target.value })}
+                  />
+                  <FieldError message={authErrors.firstName} />
+                </label>
+                <label className={ui.label}>
+                  Last name
+                  <input
+                    className={ui.input}
+                    placeholder="Tunç"
+                    value={authForm.lastName}
+                    onChange={(e) => setAuthForm({ ...authForm, lastName: e.target.value })}
+                  />
+                  <FieldError message={authErrors.lastName} />
+                </label>
+              </div>
+            )}
+
+            <label className={ui.label}>
+              Email
+              <input
+                className={ui.input}
+                inputMode="email"
+                placeholder="name@example.com"
+                type="text"
+                value={authForm.email}
+                onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+              />
+              <FieldError message={authErrors.email} />
+            </label>
+
+            {isRegister && (
+              <PhoneField
+                countryCode={authForm.countryCode}
+                phoneNumber={authForm.phoneNumber}
+                setCountryCode={(countryCode) => setAuthForm({ ...authForm, countryCode })}
+                setPhoneNumber={(phoneNumber) =>
+                  setAuthForm({ ...authForm, phoneNumber: normalizePhoneNumber(phoneNumber) })
+                }
+                error={authErrors.phone}
+                variant="default"
+              />
+            )}
+
+            <label className={ui.label}>
+              Password
+              <input
+                className={ui.input}
+                placeholder="Password"
+                type="password"
+                value={authForm.password}
+                onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+              />
+              <FieldError message={authErrors.password} />
+            </label>
+
+            {isRegister && (
+              <label className={ui.label}>
+                Confirm password
+                <input
+                  className={ui.input}
+                  placeholder="Repeat password"
+                  type="password"
+                  value={authForm.confirmPassword}
+                  onChange={(e) => setAuthForm({ ...authForm, confirmPassword: e.target.value })}
+                />
+                <FieldError message={authErrors.confirmPassword} />
+              </label>
+            )}
+
+            <button
+              className="mt-2 h-10 w-full rounded-[8px] text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ background: "var(--c-ink)", color: "var(--c-bone)" }}
+              disabled={isBusy}
+              formNoValidate
+              type="submit"
+            >
+              {isBusy ? "Please wait…" : isRegister ? "Create account" : "Sign in" /* eslint-disable-line no-nested-ternary */}
+            </button>
+          </form>
+
+          {visibleStatus && (
+            <p className="mt-4 flex min-w-0 items-center gap-2 break-words text-[13px] text-[#A6261A]">
+              <FiAlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {status}
+            </p>
+          )}
+
+          <p className="mt-5 text-[12px] text-[#A4A4AC]">
+            By continuing you agree to Lattice's Terms and Privacy.
+          </p>
+        </div>
       </section>
     </main>
   );

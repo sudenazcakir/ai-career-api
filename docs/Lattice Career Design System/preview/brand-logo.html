@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Logo</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { padding: 0; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; min-height: 150px; }
+.cell { display: grid; place-items: center; padding: 18px; }
+.cell.bone { background: var(--c-bone); }
+.cell.ink  { background: var(--c-ink); }
+.cell svg, .cell img { width: 132px; height: 28px; }
+.tag { position: absolute; left: 12px; bottom: 8px; font: 500 10px/1 var(--font-mono); letter-spacing: .05em; text-transform: uppercase; }
+.cell { position: relative; }
+.cell.bone .tag { color: var(--c-slate); }
+.cell.ink  .tag { color: var(--c-mist); }
+</style></head>
+<body>
+<div class="grid">
+  <div class="cell bone"><img src="../assets/logo-wordmark.svg" alt="Lattice"><span class="tag">on Bone</span></div>
+  <div class="cell ink"><img src="../assets/logo-wordmark-bone.svg" alt="Lattice"><span class="tag">on Ink</span></div>
+</div>
+</body></html>

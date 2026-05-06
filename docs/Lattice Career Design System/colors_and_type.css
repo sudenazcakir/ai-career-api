@@ -1,0 +1,201 @@
+/* ---------------------------------------------------------------------------
+ * Lattice — Career OS Design System
+ * Drop-in CSS tokens. Import once and use the variables.
+ *
+ *   <link rel="stylesheet" href="colors_and_type.css">
+ * ------------------------------------------------------------------------- */
+
+/* Webfonts ---------------------------------------------------------------- */
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap");
+
+/* Tokens ------------------------------------------------------------------ */
+:root {
+  /* ── Color · base ─────────────────────────────────────────── */
+  --c-ink:       #0E0E10;
+  --c-graphite: #3A3A40;
+  --c-slate:    #6B6B72;
+  --c-mist:     #A4A4AC;
+
+  --c-bone:     #F6F3EC;
+  --c-paper:    #FBFAF6;
+  --c-chalk:    #FFFFFF;
+  --c-hairline: #E8E3D7;
+
+  /* ── Color · accent ───────────────────────────────────────── */
+  --c-cobalt:    #1E3FFF;
+  --c-cobalt-h:  #1A37E0; /* hover/press */
+  --c-cobalt-50: #E6EBFF;
+
+  --c-citron:    #D7E25C;
+  --c-citron-50: #F4F7D6;
+
+  --c-plum:      #5B2A86;
+  --c-plum-50:   #EFE5F8;
+
+  /* ── Color · semantic ─────────────────────────────────────── */
+  --c-success:    #0E7C4A;
+  --c-success-50: #E5F4EC;
+  --c-warning:    #9A6712;
+  --c-warning-50: #FBF1DA;
+  --c-danger:     #A6261A;
+  --c-danger-50:  #FBE8E5;
+  --c-info:       #1E3FFF;
+  --c-info-50:    #E6EBFF;
+
+  /* ── Foreground / background semantic mapping ─────────────── */
+  --fg-1: var(--c-ink);       /* primary text, headlines */
+  --fg-2: var(--c-graphite);  /* body */
+  --fg-3: var(--c-slate);     /* meta */
+  --fg-4: var(--c-mist);      /* disabled, hairline icons */
+  --fg-on-dark: var(--c-bone);
+
+  --bg-1: var(--c-bone);      /* page */
+  --bg-2: var(--c-paper);     /* card */
+  --bg-3: var(--c-chalk);     /* input, modal sheet */
+
+  --border-1: var(--c-hairline);
+  --border-strong: var(--c-ink);
+
+  --accent: var(--c-cobalt);
+  --accent-bg: var(--c-cobalt-50);
+  --accent-hover: var(--c-cobalt-h);
+
+  /* ── Type · families ──────────────────────────────────────── */
+  --font-sans:    "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Instrument Serif", "Source Serif 4", Georgia, serif;
+  --font-mono:    "Geist Mono", ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+
+  /* ── Type · scale ─────────────────────────────────────────── */
+  --type-display-xl-size: 64px;  --type-display-xl-lh: 0.95;
+  --type-display-lg-size: 48px;  --type-display-lg-lh: 1.0;
+  --type-display-md-size: 36px;  --type-display-md-lh: 1.05;
+  --type-h1-size: 28px;          --type-h1-lh: 1.15;
+  --type-h2-size: 22px;          --type-h2-lh: 1.25;
+  --type-h3-size: 17px;          --type-h3-lh: 1.35;
+  --type-body-size: 15px;        --type-body-lh: 1.55;
+  --type-body-sm-size: 13px;     --type-body-sm-lh: 1.5;
+  --type-label-size: 12px;       --type-label-lh: 1.4;
+  --type-eyebrow-size: 11px;     --type-eyebrow-lh: 1.2;
+  --type-mono-sm-size: 12px;     --type-mono-sm-lh: 1.4;
+  --type-mono-xs-size: 10px;     --type-mono-xs-lh: 1.3;
+
+  /* ── Spacing ──────────────────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ── Radii ───────────────────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  /* ── Shadows ─────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(14,14,16,0.04);
+  --shadow-md: 0 8px 24px rgba(14,14,16,0.08);
+  --shadow-lg: 0 24px 48px -12px rgba(14,14,16,0.18);
+
+  /* ── Easings & durations ─────────────────────────────────── */
+  --ease-out-expo: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-1: 160ms;
+  --dur-2: 240ms;
+  --dur-3: 320ms;
+  --dur-4: 480ms;
+
+  /* ── Misc ────────────────────────────────────────────────── */
+  --grid-dot-color: rgba(164, 164, 172, 0.32);
+  --grid-dot-size: 1px;
+  --grid-dot-step: 16px;
+}
+
+/* Base reset -------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-family: var(--font-sans);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-lh);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+img { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+
+/* Type primitives --------------------------------------------------------- */
+.lat-display-xl,
+.lat-display-lg {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--fg-1);
+}
+.lat-display-xl { font-size: var(--type-display-xl-size); line-height: var(--type-display-xl-lh); }
+.lat-display-lg { font-size: var(--type-display-lg-size); line-height: var(--type-display-lg-lh); }
+
+.lat-display-md,
+.lat-h1, .lat-h2, .lat-h3 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--fg-1);
+}
+.lat-display-md { font-size: var(--type-display-md-size); line-height: var(--type-display-md-lh); }
+.lat-h1 { font-size: var(--type-h1-size); line-height: var(--type-h1-lh); }
+.lat-h2 { font-size: var(--type-h2-size); line-height: var(--type-h2-lh); letter-spacing: -0.01em; }
+.lat-h3 { font-size: var(--type-h3-size); line-height: var(--type-h3-lh); letter-spacing: -0.005em; }
+
+.lat-body { font-size: var(--type-body-size); line-height: var(--type-body-lh); color: var(--fg-2); }
+.lat-body-sm { font-size: var(--type-body-sm-size); line-height: var(--type-body-sm-lh); color: var(--fg-3); }
+.lat-label { font-size: var(--type-label-size); line-height: var(--type-label-lh); font-weight: 500; color: var(--fg-2); }
+
+.lat-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--type-eyebrow-size);
+  line-height: var(--type-eyebrow-lh);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.lat-mono { font-family: var(--font-mono); font-size: var(--type-mono-sm-size); line-height: var(--type-mono-sm-lh); }
+.lat-mono-xs {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-xs-size);
+  line-height: var(--type-mono-xs-lh);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.lat-italic { font-style: italic; }
+
+/* Decorative — dotted grid background ------------------------------------ */
+.lat-dot-grid {
+  background-image: radial-gradient(var(--grid-dot-color) var(--grid-dot-size), transparent var(--grid-dot-size));
+  background-size: var(--grid-dot-step) var(--grid-dot-step);
+}
+.lat-dot-grid-on-bone {
+  background-color: var(--bg-1);
+  background-image: radial-gradient(var(--grid-dot-color) var(--grid-dot-size), transparent var(--grid-dot-size));
+  background-size: var(--grid-dot-step) var(--grid-dot-step);
+}
+
+/* Focus ring -------------------------------------------------------------- */
+.lat-focus-ring:focus-visible,
+button.lat-btn:focus-visible,
+input.lat-input:focus-visible,
+select.lat-input:focus-visible,
+textarea.lat-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

@@ -1,5 +1,6 @@
+import { FiArrowRight } from "react-icons/fi";
 import PassportForm from "../components/forms/PassportForm";
-import { onboardingBg, ui } from "../styles/ui";
+import { ui } from "../styles/ui";
 
 export default function PassportOnboarding({
   isBusy,
@@ -15,20 +16,53 @@ export default function PassportOnboarding({
   }
 
   return (
-    <main className="mx-auto min-w-0 w-[min(1180px,calc(100%-32px))] py-[30px] pb-[46px] max-sm:w-[calc(100%-24px)]">
-      <header className={`mb-[18px] flex min-w-0 items-start justify-between gap-[18px] overflow-hidden rounded-xl border border-[#cad7db] p-[26px] text-white shadow-sm max-lg:flex-col max-sm:p-4 ${onboardingBg}`}>
-        <div className="min-w-0">
-          <p className="mb-2 text-xs font-black uppercase text-[#d9eeea]">Career Passport</p>
-          <h1 className="max-w-[860px] break-words text-[clamp(32px,5vw,54px)] font-black leading-[0.98] tracking-[-0.04em]">
-            Welcome, {user.firstName}. Let's build your professional profile.
+    <main className="mx-auto min-w-0 w-[min(1180px,calc(100%-32px))] py-8 pb-12 max-sm:w-[calc(100%-24px)]">
+
+      {/* ── Hero header ───────────────────────────────────────────────── */}
+      <header
+        className="lat-dot-grid mb-5 flex min-w-0 items-start justify-between gap-5 overflow-hidden rounded-[20px] border border-[#E8E3D7] p-8 max-lg:flex-col max-sm:p-5"
+        style={{ position: "relative" }}
+      >
+        {/* Decorative numeral */}
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute", right: 24, bottom: -48,
+            fontFamily: "var(--font-display)",
+            fontSize: 200, lineHeight: 1,
+            color: "var(--c-mist)", opacity: 0.28,
+            letterSpacing: "-0.02em", pointerEvents: "none", userSelect: "none",
+          }}
+        >
+          01
+        </span>
+
+        <div className="relative min-w-0">
+          <p className={ui.eyebrow}>Career Passport</p>
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(32px,4.5vw,52px)",
+              fontWeight: 400,
+              lineHeight: 1.02,
+              letterSpacing: "-0.02em",
+              color: "var(--c-ink)",
+              maxWidth: 720,
+              marginTop: 8,
+            }}
+          >
+            Welcome, <em style={{ fontStyle: "italic" }}>{user.firstName}.</em>
+            <br />Let&apos;s build your professional profile.
           </h1>
-          <p className="mt-3 max-w-[760px] break-words text-[#d9eeea]">
+          <p className="mt-3 max-w-[640px] text-[15px] leading-relaxed text-[#3A3A40]">
             Add your education, skills, experience, goals, and portfolio details.
             You can edit everything later from My Account.
           </p>
         </div>
-        <button className={ui.buttonGhost} disabled={isBusy} type="button" onClick={skipPassport}>
+
+        <button className={ui.buttonSecondary} disabled={isBusy} type="button" onClick={skipPassport}>
           Skip now
+          <FiArrowRight size={14} strokeWidth={1.5} />
         </button>
       </header>
 
@@ -37,7 +71,7 @@ export default function PassportOnboarding({
         passport={passport}
         setPassport={setPassport}
         submit={submit}
-        submitLabel={isBusy ? "Saving..." : "Save Career Passport"}
+        submitLabel={isBusy ? "Saving…" : "Save Career Passport"}
       />
     </main>
   );

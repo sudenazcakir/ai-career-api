@@ -1,3 +1,4 @@
+import { FiCheck, FiCopy, FiGitBranch, FiSave } from "react-icons/fi";
 import { ProfileSummary } from "../components/common/DataViews";
 import { ui } from "../styles/ui";
 
@@ -24,7 +25,7 @@ export default function CvPage({
         <div className={ui.sectionHead}>
           <div>
             <p className={ui.eyebrow}>Profile builder</p>
-            <h2 className="text-2xl font-black">Create a CV skill profile</h2>
+            <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">Create a CV skill profile</h2>
           </div>
         </div>
         <form className={ui.formStack} onSubmit={createCv}>
@@ -102,6 +103,7 @@ export default function CvPage({
             ))}
           </div>
           <button className={ui.button} disabled={isBusy} type="submit">
+            <FiSave size={14} strokeWidth={1.5} />
             {isBusy ? "Saving..." : "Save CV"}
           </button>
         </form>
@@ -110,27 +112,66 @@ export default function CvPage({
       <section className={ui.panel}>
         <div className={ui.sectionHead}>
           <div>
-            <h2 className="text-2xl font-black">CV Library</h2>
+            <p className={ui.eyebrow}>CV Library</p>
+            <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
+              {selectedCv ? selectedCv.title : "No CV selected"}
+            </h2>
             {selectedCv && (
-              <p className={ui.muted}>
-                Selected: {selectedCv.title} · {selectedCv.version || "v1"}
+              <p className="mt-0.5 text-[12px] text-[#6B6B72]">
+                {selectedCv.type || "General"} · {selectedCv.version || "v1"} · used for matching
               </p>
             )}
           </div>
-          <span className={ui.count}>{cvs.length}</span>
+          <span className={ui.count} style={{ fontFamily: "var(--font-mono)" }}>
+            {cvs.length} CV{cvs.length !== 1 ? "s" : ""}
+          </span>
         </div>
+
         <div className={ui.profileList}>
-          {cvs.map((cv) => (
-            <button
-              className={`${ui.profileButton} ${selectedCvId === cv._id ? ui.profileButtonActive : ""}`}
-              key={cv._id}
-              onClick={() => setSelectedCvId(cv._id)}
-              type="button"
-            >
-              <ProfileSummary cv={cv} />
-            </button>
-          ))}
-          {cvs.length === 0 && <p className={ui.muted}>No CV profiles yet.</p>}
+          {cvs.map((cv) => {
+            const isActive = selectedCvId === cv._id;
+            return (
+              <button
+                key={cv._id}
+                type="button"
+                onClick={() => setSelectedCvId(cv._id)}
+                className="relative w-full min-w-0 rounded-[12px] p-3 text-left transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3FFF] focus-visible:ring-offset-1"
+                style={isActive ? {
+                  border: "2px solid var(--c-cobalt)",
+                  background: "var(--c-cobalt-50)",
+                  boxShadow: "0 1px 4px rgba(30,63,255,0.10)",
+                } : {
+                  border: "1px solid var(--c-hairline)",
+                  background: "var(--c-paper)",
+                }}
+              >
+                {/* Active badge */}
+                {isActive && (
+                  <span
+                    className="mb-2 inline-flex items-center gap-1 rounded-[4px] px-2 py-0.5 text-[10px] font-medium"
+                    style={{
+                      background: "var(--c-cobalt)",
+                      color: "#fff",
+                      fontFamily: "var(--font-mono)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden="true">
+                      <path d="M1 4l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Active · Matching CV
+                  </span>
+                )}
+                <ProfileSummary cv={cv} />
+              </button>
+            );
+          })}
+          {cvs.length === 0 && (
+            <p className="rounded-[8px] border border-dashed border-[#A4A4AC] p-4 text-center text-[13px] text-[#6B6B72]">
+              No CV profiles yet. Create one using the form on the left.
+            </p>
+          )}
         </div>
       </section>
 
@@ -138,7 +179,7 @@ export default function CvPage({
         <div className={ui.sectionHead}>
           <div>
             <p className={ui.eyebrow}>Versioning</p>
-            <h2 className="text-2xl font-black">Version and compare CVs</h2>
+            <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">Version and compare CVs</h2>
           </div>
           <button
             className={ui.buttonSecondary}
@@ -146,6 +187,7 @@ export default function CvPage({
             onClick={createSelectedCvVersion}
             type="button"
           >
+            <FiGitBranch size={14} strokeWidth={1.5} />
             Create New Version
           </button>
         </div>
@@ -184,6 +226,7 @@ export default function CvPage({
             onClick={compareSelectedCvs}
             type="button"
           >
+            <FiCopy size={14} strokeWidth={1.5} />
             Compare
           </button>
         </div>

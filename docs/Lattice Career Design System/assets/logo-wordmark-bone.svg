@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 28" width="132" height="28">
+  <g transform="translate(0 2)">
+    <rect x="1" y="1" width="10" height="10" rx="1.5" fill="#F6F3EC"></rect>
+    <rect x="13" y="1" width="10" height="10" rx="1.5" fill="none" stroke="#F6F3EC" stroke-width="1.5"></rect>
+    <rect x="1" y="13" width="10" height="10" rx="1.5" fill="none" stroke="#F6F3EC" stroke-width="1.5"></rect>
+    <rect x="13" y="13" width="10" height="10" rx="1.5" fill="#F6F3EC"></rect>
+  </g>
+  <text x="36" y="20" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="20" font-weight="600" letter-spacing="-0.01em" fill="#F6F3EC">Lattice</text>
+</svg>

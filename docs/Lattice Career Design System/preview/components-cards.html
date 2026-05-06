@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Cards &amp; surfaces</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { padding: 18px; background: var(--c-bone); display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+.card {
+  background: var(--c-paper); border: 1px solid var(--border-1); border-radius: var(--radius-lg);
+  padding: 16px;
+}
+.card h4 { font: 600 14px/1.2 var(--font-sans); margin: 0 0 4px; color: var(--c-ink); }
+.card p  { font: 400 13px/1.5 var(--font-sans); margin: 0; color: var(--c-slate); }
+.card.elev { box-shadow: var(--shadow-sm); }
+.card.active { border-color: var(--c-ink); border-width: 1px; box-shadow: inset 0 0 0 1px var(--c-ink); }
+.metric { display: grid; gap: 6px; }
+.metric .lab { font: 500 10px/1 var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--c-slate); }
+.metric .val { font: 600 30px/1 var(--font-sans); letter-spacing: -0.01em; color: var(--c-ink); }
+.metric .delta { font: 500 11px/1 var(--font-mono); color: var(--c-success); }
+</style></head>
+<body>
+<div class="card metric">
+  <span class="lab">Match score · top job</span>
+  <span class="val">86<span style="font-size:18px;color:var(--c-slate)">%</span></span>
+  <span class="delta">+12 vs last week</span>
+</div>
+<div class="card metric">
+  <span class="lab">CV profiles</span>
+  <span class="val">4</span>
+  <span class="delta" style="color:var(--c-slate)">3 backend · 1 frontend</span>
+</div>
+<div class="card active">
+  <h4>Active selection</h4>
+  <p>1px Ink inset border. Used for the currently-selected CV in the library.</p>
+</div>
+<div class="card elev">
+  <h4>Hovered card</h4>
+  <p>Default 1px Hairline border, plus shadow-sm on hover. No color shift.</p>
+</div>
+</body></html>

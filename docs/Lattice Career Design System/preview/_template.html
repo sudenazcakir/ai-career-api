@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { background: var(--bg-1); }
+  body { padding: 20px; }
+  .card { display: grid; gap: 12px; }
+  .swatch-grid { display: grid; gap: 8px; }
+  .row { display: flex; gap: 8px; align-items: stretch; }
+  .swatch {
+    flex: 1; min-width: 0;
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    background: var(--bg-2);
+    display: grid; gap: 4px; align-content: end;
+    aspect-ratio: 16 / 9;
+    min-height: 76px;
+  }
+  .swatch .name { font: 500 12px/1.2 var(--font-sans); color: var(--fg-1); }
+  .swatch .hex  { font: 400 11px/1.2 var(--font-mono); color: var(--fg-3); }
+  .swatch.dark .name, .swatch.dark .hex { color: var(--c-bone); }
+</style>
+</head>
+<body><div class="card" id="root"></div></body>
+</html>
