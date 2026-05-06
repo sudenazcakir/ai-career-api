@@ -75,14 +75,24 @@ app.use("/api", careerMatrixRoutes);
 app.use("/api", applicationRoutes);
 app.use("/api", certificateRoutes);
 
-// Server
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Backend: http://localhost:${PORT}`);
-  console.log(`Frontend: http://localhost:${FRONTEND_PORT}`);
-  console.log(`Swagger: http://localhost:${PORT}/api-docs`);
+// SPA fallback — React Router için tüm non-API route'ları index.html'e yönlendir
+app.get("*", (req, res) => {
+  const indexPath = path.join(__dirname, "public", "index.html");
+  res.sendFile(indexPath);
 });
 
-server.on("error", (error) => {
-  console.error("Server error:", error.message);
-});
+// Local geliştirme için server.listen — Vercel'de çalışmaz
+if (require.main === module) {
+  const server = app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Backend: http://localhost:${PORT}`);
+    console.log(`Frontend: http://localhost:${FRONTEND_PORT}`);
+    console.log(`Swagger: http://localhost:${PORT}/api-docs`);
+  });
+
+  server.on("error", (error) => {
+    console.error("Server error:", error.message);
+  });
+}
+
+module.exports = app;

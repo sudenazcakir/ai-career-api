@@ -157,7 +157,7 @@ export default function InsightsPage({
       </section>
 
       {/* ── Match explanation ─────────────────────────────────────────── */}
-      <section className={ui.panel}>
+      <section className={ui.panel} data-testid="match-result">
         <div className={ui.sectionHead}>
           <div>
             <p className={ui.eyebrow}>Match result</p>

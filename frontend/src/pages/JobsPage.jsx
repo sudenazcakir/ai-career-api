@@ -167,7 +167,7 @@ export default function JobsPage({
               )}
             </h2>
             {syncLabel && (
-              <p className="mt-1 text-[11px] text-[#A4A4AC] font-mono">
+              <p className="mt-1 text-[11px] text-[#A4A4AC] font-mono" data-testid="sync-status">
                 {syncLabel} - {jobs.length} jobs
               </p>
             )}
@@ -410,7 +410,7 @@ export default function JobsPage({
           </div>
 
           {jobs.length ? (
-            <div className="grid gap-2.5">
+            <div className="grid gap-2.5" data-testid="jobs-list">
               {jobs.map((job, index) => (
                 <SelectableJobCard
                   isSelected={jobKey(job, index) === selectedJobId}

@@ -7,10 +7,19 @@
     "server": "node backend/server.js",
     "client": "vite --host 0.0.0.0",
     "build": "vite build",
+    "build:prod": "vite build && cp -r frontend/dist/. backend/public/",
     "dev": "vite",
     "start": "node backend/server.js",
     "seed:demo": "node backend/scripts/seedDemo.js",
+    "seed:test": "node backend/scripts/seedFullTestData.js",
+    "seed:test:reset": "node backend/scripts/seedFullTestData.js --reset",
     "check:db": "node backend/scripts/checkDb.js",
+    "test:applications": "node backend/scripts/testApplications.js",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -39,5 +48,8 @@
     "swagger-ui-express": "^5.0.1",
     "tailwindcss": "^4.2.4",
     "vite": "^8.0.10"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
   }
 }
