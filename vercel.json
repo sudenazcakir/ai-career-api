@@ -1,18 +1,22 @@
 {
   "version": 2,
-  "buildCommand": "npm run build:prod",
   "builds": [
     {
-      "src": "backend/server.js",
-      "use": "@vercel/node",
+      "src": "package.json",
+      "use": "@vercel/static-build",
       "config": {
-        "includeFiles": "backend/public/**"
+        "distDir": "frontend/dist"
       }
+    },
+    {
+      "src": "backend/server.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "backend/server.js" },
     { "src": "/api-docs(.*)", "dest": "backend/server.js" },
-    { "src": "/(.*)", "dest": "backend/server.js" }
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
