@@ -5,13 +5,21 @@ export const ui = {
   shell:
     "min-h-screen overflow-x-hidden bg-[#F6F3EC] text-[#0E0E10] lg:pl-[232px]",
   sidebar:
-    "fixed inset-y-0 left-0 z-10 flex w-[232px] flex-col gap-0 border-r border-[#E8E3D7] bg-[#FBFAF6] p-0 max-lg:static max-lg:h-auto max-lg:w-auto",
+    "fixed inset-y-0 left-0 z-30 flex w-[232px] flex-col gap-0 border-r border-[#E8E3D7] bg-[#FBFAF6] p-0 transition-transform duration-200 max-lg:-translate-x-full",
+  sidebarOpen:
+    "max-lg:translate-x-0 max-lg:shadow-[4px_0_24px_rgba(14,14,16,0.14)]",
+  sidebarOverlay:
+    "fixed inset-0 z-20 bg-[rgba(14,14,16,0.32)] backdrop-blur-[2px] lg:hidden",
   brand:
     "flex items-center gap-2.5 px-4 py-[18px] border-b border-[#E8E3D7]",
   brandMark:
     "grid h-[22px] w-[22px] shrink-0 place-items-center",
+  sidebarClose:
+    "ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-[8px] text-[#6B6B72] transition-colors hover:bg-[#F6F3EC] hover:text-[#0E0E10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3FFF] lg:hidden",
+  hamburger:
+    "grid h-9 w-9 shrink-0 place-items-center rounded-[8px] border border-[#E8E3D7] bg-[#FBFAF6] text-[#3A3A40] transition-colors hover:border-[#A4A4AC] hover:text-[#0E0E10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3FFF] lg:hidden",
   nav:
-    "flex-1 overflow-y-auto px-3.5 pt-3 max-lg:flex max-lg:flex-row max-lg:flex-wrap max-lg:gap-1 max-lg:px-2 max-lg:py-2",
+    "flex-1 overflow-y-auto px-3.5 pt-3",
   navButton:
     "flex h-[34px] w-full items-center gap-2.5 rounded-[8px] px-3 text-left text-[13px] font-medium text-[#3A3A40] no-underline transition-colors hover:bg-[#F6F3EC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3FFF] focus-visible:ring-offset-1",
   navButtonActive:
@@ -156,7 +164,7 @@ export const ui = {
   passportSectionHead:
     "min-w-0 [&>h3]:mb-1 [&>h3]:break-words [&>h3]:text-[17px] [&>h3]:font-[600] [&>h3]:tracking-[-0.01em] [&>h3]:text-[#0E0E10] [&>p]:break-words [&>p]:text-[13px] [&>p]:font-[400] [&>p]:text-[#6B6B72]",
   passportFields:
-    "grid min-w-0 grid-cols-[repeat(2,minmax(0,1fr))] gap-3 max-lg:grid-cols-1",
+    "grid min-w-0 grid-cols-[repeat(2,minmax(0,1fr))] items-start gap-3 max-lg:grid-cols-1",
 
   /* insights / roadmap */
   roadmap:

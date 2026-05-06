@@ -175,11 +175,16 @@ router.get("/jobs/filter", async (req, res) => {
         { description: { $regex: escapeRegex(keyword), $options: "i" } },
       ];
     }
-    if (skill) {
-      query.skills = { $regex: `^${escapeRegex(skill)}$`, $options: "i" };
-    }
-
     let jobs = await Job.find(query).sort({ createdAt: -1 });
+
+    if (skill) {
+      const normalizedSkill = String(skill).trim().toLowerCase();
+      jobs = jobs.filter((job) =>
+        (job.skills || []).some((jobSkill) =>
+          String(jobSkill).toLowerCase().includes(normalizedSkill)
+        )
+      );
+    }
 
     let userSkills = [];
     if (cvId) {
