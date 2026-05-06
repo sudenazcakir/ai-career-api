@@ -116,6 +116,20 @@ img, canvas { max-width: 100%; }
   .route-transition { animation: none; }
 }
 
+.job-detail-panel {
+  animation: job-detail-slide-in 240ms var(--ease-out) both;
+  will-change: opacity, transform;
+}
+
+@keyframes job-detail-slide-in {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .job-detail-panel { animation: none; }
+}
+
 /* ── Loading bar ───────────────────────────────────────────────────────── */
 .lat-loading-bar-track {
   position: fixed;
@@ -137,4 +151,19 @@ img, canvas { max-width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .lat-loading-bar-fill { animation: none; width: 100%; opacity: 0.6; }
+}
+
+/* ── Roadmap generate progress ─────────────────────────────────────────── */
+.roadmap-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--c-cobalt);
+  animation: roadmap-progress 900ms var(--ease-out) forwards;
+}
+@keyframes roadmap-progress {
+  from { width: 0%; }
+  to   { width: 95%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-progress-fill { animation: none; width: 95%; }
 }

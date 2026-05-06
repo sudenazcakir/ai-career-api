@@ -106,6 +106,20 @@ export function getSimilarApplications() {
   return apiRequest("/api/applications/similar-roles");
 }
 
+export async function extractCertificate(file) {
+  const token = localStorage.getItem("authToken");
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch("/api/certificates/extract", {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Extraction failed");
+  return data;
+}
+
 export function deleteCv(cvId) {
   return apiRequest(`/api/cvs/${cvId}`, { method: "DELETE" });
 }

@@ -4,7 +4,6 @@ import {
   FiLayout, FiMap, FiTarget, FiUser, FiZap,
 } from "react-icons/fi";
 import {
-  defaultMatch,
   emptyPassport,
   emptyUser,
   pages,
@@ -40,7 +39,7 @@ import {
 } from "./services/authService";
 import {
   buildRoadmap,
-  calculateMatch,
+  calculateFullMatch,
   compareCvProfiles,
   createCvProfile,
   createCvVersion,
@@ -150,7 +149,6 @@ export default function App() {
     certifications: "",
   });
   const [filterForm, setFilterForm] = useState(DEFAULT_FILTER_FORM);
-  const [matchForm, setMatchForm] = useState(defaultMatch);
   const [jobs, setJobs] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [matchResult, setMatchResult] = useState(null);
@@ -160,6 +158,7 @@ export default function App() {
   const [skillAnalytics, setSkillAnalytics] = useState(null);
   const [trendAnalytics, setTrendAnalytics] = useState(null);
   const [applications, setApplications] = useState([]);
+  const [similarApplications, setSimilarApplications] = useState([]);
   const [pendingAction, setPendingAction] = useState("");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [jobsSyncedAt, setJobsSyncedAt] = useState(null);
@@ -167,6 +166,7 @@ export default function App() {
 
   const loadingBarTimerRef = useRef(null);
   const jobsAutoSyncDoneRef = useRef(false);
+  const similarApplicationsLoadedRef = useRef(false);
 
   const applicationStatuses = ["Saved for Later", "Under Review", "Accepted", "Rejected"];
 
@@ -186,6 +186,13 @@ export default function App() {
     if (errorWords.some((w) => lower.includes(w))) return "error";
     return "success";
   }, [status, pendingAction]);
+  const statusLabel = useMemo(() => {
+    if (!status) return "System ready";
+    if (status.includes("OPENAI_API_KEY")) {
+      return status.toLowerCase().includes("cv draft") ? "CV draft ready" : "AI fallback active";
+    }
+    return status;
+  }, [status]);
 
   const activePage =
     pages.find((page) => page.path === location.pathname) || pages[0];
@@ -242,6 +249,14 @@ export default function App() {
   async function loadApplications() {
     const data = await listApplications();
     setApplications(data.data || []);
+  }
+
+  function loadSimilarApplications() {
+    runAction("Finding similar roles", async () => {
+      const data = await getSimilarApplications();
+      setSimilarApplications(data.data || []);
+      setStatus(`${data.data?.length || 0} similar roles found`);
+    });
   }
 
   function loadCvIntoForm(cv) {
@@ -520,6 +535,18 @@ export default function App() {
       });
   }, [location.pathname, user]);
 
+  // Auto-load similar roles on first visit to /applications
+  useEffect(() => {
+    if (!user || location.pathname !== "/applications" || similarApplicationsLoadedRef.current) return;
+    similarApplicationsLoadedRef.current = true;
+
+    getSimilarApplications()
+      .then((data) => setSimilarApplications(data.data || []))
+      .catch((e) => {
+        if (e?.status !== 401) setStatus(`Could not load similar roles: ${e.message}`);
+      });
+  }, [location.pathname, user]);
+
   async function runAction(label, action) {
     try {
       setPendingAction(label);
@@ -637,9 +664,7 @@ export default function App() {
         certifications: (draft.certifications || []).join("\n"),
       });
       setEditingCvId(null);
-      setStatus(
-        draft.message ? `CV draft ready — ${draft.message}` : "CV draft ready — review and save"
-      );
+      setStatus("CV draft ready");
     });
   }
 
@@ -742,16 +767,15 @@ export default function App() {
     });
   }
 
-  function runMatch(event) {
-    event.preventDefault();
-    runAction("Calculating match explainability", async () => {
-      const data = await calculateMatch({
-        cvSkills: splitSkills(matchForm.cvSkills),
-        jobSkills: splitSkills(matchForm.jobSkills),
-      });
-
+  function runInsightMatch(cvId, jobId) {
+    if (!cvId || !jobId) {
+      setStatus("Select a CV and a job first");
+      return;
+    }
+    runAction("Calculating match", async () => {
+      const data = await calculateFullMatch({ cvId, jobId });
       setMatchResult(data);
-      setStatus("Match explanation ready");
+      setStatus("Match ready");
     });
   }
 
@@ -1021,7 +1045,7 @@ export default function App() {
                 statusType === "loading" ? "bg-[var(--c-warning)] animate-pulse" :
                 "bg-[#A4A4AC]"
               }`} />
-              <span className="min-w-0 truncate">{status}</span>
+              <span className="min-w-0 truncate">{statusLabel}</span>
             </div>
             <button
               type="button"
@@ -1139,8 +1163,8 @@ export default function App() {
                 <ApplicationsPage
                   applications={applications}
                   applicationStatuses={applicationStatuses}
-                  selectedCvId={selectedCvId}
-                  trackApplication={handleTrackApplication}
+                  loadSimilarApplications={loadSimilarApplications}
+                  similarApplications={similarApplications}
                   updateApplicationStatus={handleUpdateApplicationStatus}
                   setActivePage={navigatePage}
                 />
@@ -1163,21 +1187,22 @@ export default function App() {
               path="/insights"
               element={
                 <InsightsPage
-                  matchForm={matchForm}
-                  setMatchForm={setMatchForm}
-                  runMatch={runMatch}
                   analyzeGaps={analyzeGaps}
+                  applications={applications}
+                  bestCvResult={bestCvResult}
+                  calculateSuccessScore={calculateSuccessScore}
+                  cvs={cvs}
                   findBestCv={findBestCv}
+                  isBusy={isBusy}
+                  jobs={jobs}
                   matchResult={matchResult}
                   analysisResult={analysisResult}
-                  bestCvResult={bestCvResult}
                   recommendations={recommendations}
+                  runInsightMatch={runInsightMatch}
                   skillAnalytics={skillAnalytics}
+                  successScore={successScore}
                   trendAnalytics={trendAnalytics}
                   loadAnalytics={loadAnalytics}
-                  successScore={successScore}
-                  calculateSuccessScore={calculateSuccessScore}
-                  isBusy={isBusy}
                 />
               }
             />

@@ -1,26 +1,88 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiRefreshCw, FiTarget, FiZap } from "react-icons/fi";
+import { FiTarget, FiZap } from "react-icons/fi";
 import { ui } from "../styles/ui";
 import { buildSkillGaps } from "./SkillGapPage";
+import TimelineRow from "../components/roadmap/TimelineRow";
 
 const STAGE_STEPS = {
-  Docker:     ["Docker basics tutorial", "Dockerize an existing project", "Push image to Docker Hub", "Multi-stage builds"],
-  PostgreSQL: ["Indexes & query plans", "Migrations with Prisma/Knex", "Backups and restore", "Performance tuning"],
-  AWS:        ["EC2, S3, IAM basics", "Free Tier project deploy", "AWS Cloud Practitioner cert"],
-  Kubernetes: ["Kubernetes fundamentals", "Deploy an app to a cluster", "Configure ingress & services"],
-  default:    ["Learn core concepts", "Build a small project using it", "Integrate into an existing codebase"],
+  docker:      ["Complete a Docker basics course", "Dockerize an existing project", "Push an image to Docker Hub", "Write multi-stage builds"],
+  kubernetes:  ["Learn Kubernetes fundamentals", "Deploy a containerised app to a cluster", "Configure ingress and services", "Set up health checks and monitoring"],
+  aws:         ["Cover EC2, S3 and IAM basics", "Deploy a project on the free tier", "Study for AWS Cloud Practitioner", "Use CloudWatch for observability"],
+  postgresql:  ["Study indexes and query plans", "Run migrations with a migration tool", "Practice backup and restore", "Tune a slow-running query"],
+  redis:       ["Understand caching patterns", "Integrate Redis into an existing project", "Handle cache invalidation logic", "Use pub/sub for event-driven messaging"],
+  graphql:     ["Learn GraphQL schema design", "Build a resolver and query", "Add authentication to a schema", "Write integration tests"],
+  typescript:  ["Enable strict mode in an existing project", "Type all props and return values", "Write utility and mapped types", "Migrate a JS module to TS"],
+  python:      ["Complete a Python fundamentals course", "Build a focused CLI tool", "Write unit tests with pytest", "Deploy or publish a small project"],
+  react:       ["Build a small CRUD app", "Add state management with Context or Zustand", "Write component tests with Vitest", "Deploy to Vercel or Netlify"],
+  node:        ["Build a REST API with Express", "Add JWT authentication", "Write integration tests", "Deploy to a cloud provider"],
+  java:        ["Review OOP concepts and collections", "Build a Spring Boot service", "Add persistence with JPA", "Write unit tests with JUnit"],
+  spring:      ["Set up a Spring Boot project", "Implement REST endpoints", "Add database integration", "Write integration tests"],
+  kafka:       ["Understand topics, producers and consumers", "Run Kafka locally with Docker", "Implement a producer/consumer app", "Handle offset management"],
+  terraform:   ["Learn HCL syntax and providers", "Provision cloud resources with a plan", "Use modules for reusable infra", "Set up remote state"],
+  linux:       ["Learn file system navigation", "Write basic shell scripts", "Configure systemd services", "Harden a server with basic security"],
+  git:         ["Master branching strategies", "Learn interactive rebase", "Set up pre-commit hooks", "Contribute to an open source project"],
+  default:     ["Learn core concepts", "Build a focused practice project", "Integrate into an existing codebase", "Add to CV and portfolio"],
 };
 
 const STAGE_TIMELINE = ["Week 1–2", "Week 3–5", "Week 6–8", "Week 9–10"];
+
+const ALIASES = {
+  "react.js":   "react",
+  "reactjs":    "react",
+  "vue.js":     "vue",
+  "node.js":    "node",
+  "nodejs":     "node",
+  "express.js": "node",
+  "postgres":   "postgresql",
+  "pg":         "postgresql",
+  "k8s":        "kubernetes",
+  "ci/cd":      "ci",
+  "cicd":       "ci",
+  "ts":         "typescript",
+};
+
+function getSteps(skillName) {
+  const lower = skillName.toLowerCase().trim();
+
+  // 1. Exact match
+  if (STAGE_STEPS[lower]) return STAGE_STEPS[lower];
+
+  // 2. Alias match on full name
+  const resolved = ALIASES[lower];
+  if (resolved && STAGE_STEPS[resolved]) return STAGE_STEPS[resolved];
+
+  // 3. Word-split match (handles "Node.js GraphQL" → word "node" hits)
+  const words = lower.split(/[\s./\-+]+/).filter(Boolean);
+  for (const word of words) {
+    if (STAGE_STEPS[word]) return STAGE_STEPS[word];
+    const wordAlias = ALIASES[word];
+    if (wordAlias && STAGE_STEPS[wordAlias]) return STAGE_STEPS[wordAlias];
+  }
+
+  // 4. Partial match fallback
+  const partialKey = Object.keys(STAGE_STEPS).find((k) => lower.includes(k));
+  return STAGE_STEPS[partialKey] || STAGE_STEPS.default;
+}
+
+function buildHeroText(canGenerate, jobCount, gapCount, hasCv, hasJobs) {
+  if (canGenerate) {
+    const gapWord = gapCount === 1 ? "gap" : "gaps";
+    const jobWord = jobCount === 1 ? "job" : "jobs";
+    return `${gapCount} skill ${gapWord} identified across ${jobCount} ${jobWord}. Generate your personalised growth plan.`;
+  }
+  if (!hasJobs) return "Load jobs and select a CV to generate your personalised growth plan.";
+  if (!hasCv)  return "Select a CV to compare against your loaded jobs.";
+  return "No skill gaps found — your CV covers all job requirements.";
+}
 
 export default function RoadmapPage({
   jobs,
   recommendations,
   selectedCv,
   analyzeGaps,
-  analysisResult,
-  matchResult,
 }) {
+
   const navigate   = useNavigate();
   const allJobs    = [...jobs, ...recommendations].filter((j) => j?._id);
   const uniqueJobs = [...new Map(allJobs.map((j) => [j._id, j])).values()];
@@ -31,25 +93,77 @@ export default function RoadmapPage({
     id:    `s${i}`,
     label: STAGE_TIMELINE[i] || `Phase ${i + 1}`,
     skill: g.skill,
-    steps: STAGE_STEPS[g.skill] || STAGE_STEPS.default,
+    steps: getSteps(g.skill),
     freq:  g.count,
   }));
 
-  const apiRoadmap = analysisResult?.roadmap || [];
-  const hasStages  = stages.length > 0;
-  const hasApi     = apiRoadmap.length > 0;
+  const hasJobs     = uniqueJobs.length > 0;
+  const hasCv       = Boolean(selectedCv);
+  const canGenerate = hasJobs && hasCv && topGaps.length > 0;
+  const hasStages   = stages.length > 0;
+
+  const heroText = buildHeroText(canGenerate, uniqueJobs.length, topGaps.length, hasCv, hasJobs);
+
+  const [showRoadmap, setShowRoadmap] = useState(false);
+  const [generating, setGenerating]   = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    setShowRoadmap(false);
+    setGenerating(false);
+    clearTimeout(timerRef.current);
+  }, [selectedCv?._id]);
+
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  const [completion, setCompletion] = useState([]);
+
+  useEffect(() => {
+    setCompletion((prev) =>
+      stages.map((s, i) =>
+        prev[i] && prev[i].length === s.steps.length
+          ? prev[i]
+          : new Array(s.steps.length).fill(false)
+      )
+    );
+  }, [stages.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const activeIndex = useMemo(() => {
+    for (let i = 0; i < stages.length; i++) {
+      if (!completion[i]?.every(Boolean)) return i;
+    }
+    return Math.max(stages.length - 1, 0);
+  }, [completion, stages.length]);
+
+  function handleGenerate() {
+    if (!canGenerate || generating) return;
+    setCompletion(stages.map((s) => new Array(s.steps.length).fill(false)));
+    setGenerating(true);
+    timerRef.current = setTimeout(() => {
+      setGenerating(false);
+      setShowRoadmap(true);
+      if (typeof analyzeGaps === "function") analyzeGaps();
+    }, 900);
+  }
+
+  function toggleStep(stageIdx, stepIdx) {
+    setCompletion((prev) => {
+      const copy = prev.map((row) => [...row]);
+      if (copy[stageIdx]) copy[stageIdx][stepIdx] = !copy[stageIdx][stepIdx];
+      return copy;
+    });
+  }
 
   return (
     <div className="grid gap-[18px]">
 
-      {/* ── Page header ──────────────────────────────────────────────── */}
+      {/* ── Hero ──────────────────────────────────────────────────────── */}
       <section className={`${ui.heroPanel} lat-dot-grid`}>
         <span
           aria-hidden="true"
           style={{
             position: "absolute", right: 24, bottom: -48,
-            fontFamily: "var(--font-display)",
-            fontSize: 200, lineHeight: 1,
+            fontFamily: "var(--font-display)", fontSize: 200, lineHeight: 1,
             color: "var(--c-mist)", opacity: 0.28,
             letterSpacing: "-0.02em", pointerEvents: "none", userSelect: "none",
           }}
@@ -68,146 +182,106 @@ export default function RoadmapPage({
             Your learning <em style={{ fontStyle: "italic" }}>roadmap.</em>
           </h2>
           <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-[#3A3A40]">
-            Generated from your top skill gaps. Each milestone unlocks more jobs.
+            {heroText}
           </p>
           <div className="mt-5 flex flex-wrap gap-2.5">
-            {matchResult?.missingSkills?.length > 0 && (
-              <button className={ui.buttonCobalt} type="button" onClick={analyzeGaps}>
-                <FiRefreshCw size={14} strokeWidth={1.5} />
-                Refresh from AI
+            {showRoadmap ? (
+              <button
+                className={ui.buttonGhost}
+                type="button"
+                onClick={() => setShowRoadmap(false)}
+              >
+                Reset plan
+              </button>
+            ) : (
+              <button
+                className={ui.buttonCobalt}
+                type="button"
+                onClick={handleGenerate}
+                disabled={!canGenerate || generating}
+                title={canGenerate ? "" : "Load jobs and select a CV first"}
+              >
+                <FiZap size={14} strokeWidth={1.5} />
+                {generating ? "Generating…" : "Generate growth plan"}
               </button>
             )}
-            <button className={ui.buttonSecondary} type="button" onClick={analyzeGaps}>
-              <FiZap size={14} strokeWidth={1.5} />
-              Analyse gaps
+            <button
+              className={ui.buttonSecondary}
+              type="button"
+              onClick={() => navigate("/skill-gaps")}
+            >
+              <FiTarget size={14} strokeWidth={1.5} />
+              View skill map
             </button>
           </div>
         </div>
       </section>
 
-      {/* ── Empty state ───────────────────────────────────────────────── */}
-      {!hasStages && !hasApi && (
-        <section className={ui.panel}>
-          <div className="py-4 text-center">
-            <p className="text-[13px] text-[#6B6B72]">
-              {uniqueJobs.length === 0
-                ? "No jobs loaded yet. Import jobs then select a CV to generate your personalised roadmap."
-                : "Select a CV to compare against your loaded jobs and generate a growth plan."}
-            </p>
-            <div className="mt-4 flex justify-center gap-2.5">
-              <button className={ui.buttonCobalt} type="button" onClick={() => navigate("/skill-gaps")}>
-                <FiTarget size={14} strokeWidth={1.5} />
-                Back to Skill Map
-              </button>
-              <button className={ui.buttonSecondary} type="button" onClick={analyzeGaps}>
-                <FiZap size={14} strokeWidth={1.5} />
-                Analyse gaps
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ── Milestone cards ───────────────────────────────────────────── */}
-      {hasStages && (
-        <div className="grid gap-[18px]">
-          {stages.map((stage, idx) => (
-            <section key={stage.id} className={ui.panel}>
-              {/* Milestone header */}
-              <div className="mb-5 flex items-start gap-4">
-                {/* Step circle */}
-                <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-[#F6F3EC]"
-                  style={{
-                    background: "var(--c-cobalt)",
-                    fontFamily: "var(--font-mono)",
-                    minWidth: 36,
-                  }}
-                >
-                  {idx + 1}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Timeline badge */}
-                    <span
-                      className="inline-flex items-center rounded-[4px] bg-[#E6EBFF] px-2 py-0.5 text-[10px] font-medium text-[#1E3FFF]"
-                      style={{ fontFamily: "var(--font-mono)" }}
-                    >
-                      {stage.label}
-                    </span>
-                    {/* Frequency badge */}
-                    <span
-                      className="inline-flex items-center rounded-[4px] bg-[#EFE5F8] px-2 py-0.5 text-[10px] font-medium text-[#5B2A86]"
-                      style={{ fontFamily: "var(--font-mono)" }}
-                    >
-                      {stage.freq} job{stage.freq !== 1 ? "s" : ""} require this
-                    </span>
-                  </div>
-                  <h3
-                    className="mt-1 text-[20px] font-semibold tracking-[-0.01em] text-[#0E0E10]"
-                  >
-                    {stage.skill}
-                  </h3>
-                </div>
-              </div>
-
-              {/* Learning steps */}
-              <div className="grid gap-2">
-                {stage.steps.map((step, stepIdx) => (
-                  <div
-                    key={step}
-                    className="flex items-center gap-3 rounded-[8px] border border-[#E8E3D7] bg-[#F6F3EC] px-4 py-3"
-                  >
-                    <span
-                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#E8E3D7] text-[10px] font-medium text-[#6B6B72]"
-                      style={{ fontFamily: "var(--font-mono)", minWidth: 20 }}
-                    >
-                      {stepIdx + 1}
-                    </span>
-                    <span className="text-[13px] text-[#3A3A40]">{step}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ))}
+      {/* ── Progress bar ──────────────────────────────────────────────── */}
+      {generating && (
+        <div aria-hidden="true" className="h-[3px] overflow-hidden rounded-full bg-[#E8E3D7]">
+          <div className="roadmap-progress-fill" />
         </div>
       )}
 
-      {/* ── AI-generated roadmap ──────────────────────────────────────── */}
-      {hasApi && (
+      {/* ── Instruction / empty state (before generate) ───────────────── */}
+      {!showRoadmap && !generating && (
         <section className={ui.panel}>
-          <div className={ui.sectionHead}>
-            <div>
-              <p className={ui.eyebrow}>AI-generated roadmap</p>
-              <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
-                Personalised steps
-              </h2>
-            </div>
-            <span
-              className={ui.count}
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
-              {apiRoadmap.length} steps
-            </span>
-          </div>
-
-          <div className="grid gap-2">
-            {apiRoadmap.map((item, index) => (
-              <div
-                key={item}
-                className="flex items-start gap-3 rounded-[8px] border-l-2 border-[#1E3FFF] bg-[#FBFAF6] px-4 py-3"
-              >
-                <span
-                  className="mt-0.5 shrink-0 text-[10px] font-medium text-[#1E3FFF]"
-                  style={{ fontFamily: "var(--font-mono)", minWidth: 20 }}
-                >
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <p className="text-[13px] leading-relaxed text-[#3A3A40]">{item}</p>
+          {canGenerate ? (
+            <div className="flex flex-col items-center py-3 text-center">
+              <p className="text-[13px] font-medium text-[#0E0E10]">Ready to generate</p>
+              <p className="mt-1 max-w-sm text-[13px] text-[#6B6B72]">
+                Each skill gap becomes a milestone with actionable learning steps.
+              </p>
+              <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                {topGaps.map((g) => (
+                  <span key={g.skill} className={ui.chipMissing}>{g.skill}</span>
+                ))}
               </div>
+              <button
+                className={`${ui.buttonCobalt} mt-4`}
+                type="button"
+                onClick={handleGenerate}
+              >
+                <FiZap size={14} strokeWidth={1.5} />
+                Generate growth plan
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center py-3 text-center">
+              <p className="text-[13px] text-[#6B6B72]">{heroText}</p>
+              <button
+                className={`${ui.buttonSecondary} mt-4`}
+                type="button"
+                onClick={() => navigate("/skill-gaps")}
+              >
+                <FiTarget size={14} strokeWidth={1.5} />
+                View skill map
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ── Timeline milestones ───────────────────────────────────────── */}
+      {showRoadmap && hasStages && (
+        <div>
+          <div className="grid gap-[18px]">
+            {stages.map((stage, idx) => (
+              <section key={stage.id} className={ui.panel}>
+                <TimelineRow
+                  index={idx}
+                  isActive={idx === activeIndex}
+                  isCompleted={!!(completion[idx]?.every(Boolean))}
+                  onToggleStep={(si) => toggleStep(idx, si)}
+                  stage={stage}
+                  stepsCompleted={completion[idx] || new Array(stage.steps.length).fill(false)}
+                  weekLabel={stage.label}
+                />
+              </section>
             ))}
           </div>
-        </section>
+        </div>
       )}
     </div>
   );

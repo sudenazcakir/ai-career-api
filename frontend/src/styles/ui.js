@@ -31,13 +31,13 @@ export const ui = {
   header:
     "mb-5 flex min-w-0 items-end justify-between gap-4 max-lg:flex-col max-lg:items-start border-b border-[#E8E3D7] pb-5",
   headerActions:
-    "flex min-w-0 flex-wrap items-center gap-2",
+    "flex min-w-0 shrink-0 items-center gap-2 max-sm:w-full",
   eyebrow:
     "mb-1 text-[11px] font-[500] uppercase tracking-[0.08em] text-[#6B6B72] font-mono",
   pageTitle:
     "max-w-full break-words text-[28px] font-[600] leading-[1.15] tracking-[-0.015em] text-[#0E0E10]",
   pulse:
-    "inline-flex min-h-[34px] max-w-[min(420px,100%)] min-w-0 items-center gap-2 rounded-[8px] border border-[#E8E3D7] bg-[#FBFAF6] px-3 text-[11px] font-[500] text-[#6B6B72] font-mono uppercase tracking-[0.04em]",
+    "inline-flex min-h-[34px] max-w-[min(320px,100%)] min-w-0 overflow-hidden items-center gap-2 rounded-[8px] border border-[#E8E3D7] bg-[#FBFAF6] px-3 text-[11px] font-[500] text-[#6B6B72] font-mono uppercase tracking-[0.04em]",
   pulseDot:
     "h-[6px] w-[6px] shrink-0 rounded-full bg-[#0E7C4A]",
   accountButton:
@@ -130,7 +130,7 @@ export const ui = {
   accountHero:
     "grid min-w-0 grid-cols-[auto_minmax(0,1fr)_max-content] items-center gap-4 overflow-hidden rounded-[12px] border border-[#E8E3D7] bg-[#FBFAF6] p-5 max-lg:grid-cols-1 max-sm:p-4",
   avatarEditor:
-    "relative inline-grid w-max cursor-pointer place-items-center [&>input]:hidden [&>span]:absolute [&>span]:-right-1.5 [&>span]:bottom-1 [&>span]:grid [&>span]:h-[24px] [&>span]:w-[24px] [&>span]:place-items-center [&>span]:rounded-full [&>span]:bg-[#F6F3EC] [&>span]:text-xs [&>span]:font-[600] [&>span]:text-[#0E0E10] [&>span]:border [&>span]:border-[#E8E3D7]",
+    "relative inline-grid h-[68px] w-[68px] cursor-pointer place-items-center [&>input]:hidden [&>span]:absolute [&>span]:right-0 [&>span]:bottom-0 [&>span]:grid [&>span]:h-[24px] [&>span]:w-[24px] [&>span]:place-items-center [&>span]:rounded-full [&>span]:bg-[#F6F3EC] [&>span]:text-xs [&>span]:font-[600] [&>span]:text-[#0E0E10] [&>span]:border [&>span]:border-[#E8E3D7] [&>span]:shadow-[0_1px_3px_rgba(14,14,16,0.12)]",
   accountAvatar:
     "grid h-[60px] w-[60px] shrink-0 place-items-center overflow-hidden rounded-full border-2 border-[#E8E3D7] bg-[#0E0E10] object-cover text-2xl font-[600] text-[#F6F3EC]",
   cardGrid:

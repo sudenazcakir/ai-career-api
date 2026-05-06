@@ -2,6 +2,18 @@ import { FiBriefcase, FiSearch } from "react-icons/fi";
 import { Empty, JobList } from "../components/common/DataViews";
 import { ui } from "../styles/ui";
 
+function formatDate(dateString) {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return null;
+  const now = new Date();
+  const diffDays = Math.floor((now - date) / 86400000);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 /* Pill style per status — matches lat-status-pill from design system */
 const STATUS_PILL = {
   "Saved for Later": { bg: "#F6F3EC", color: "#3A3A40", border: "1px solid #E8E3D7" },
@@ -176,6 +188,11 @@ function ApplicationCard({ application, applicationStatuses, updateApplicationSt
           {application.job?.company || "Unknown company"}
           {application.cv?.title && ` · ${application.cv.title}`}
         </p>
+        {(application.updatedAt || application.appliedAt) && (
+          <p className="mt-0.5 text-[11px] text-[#A4A4AC]" style={{ fontFamily: "var(--font-mono)" }}>
+            {formatDate(application.updatedAt || application.appliedAt)}
+          </p>
+        )}
         {skills.length > 0 && (
           <div className={`${ui.chips} mt-2`}>
             {skills.map((skill) => (
@@ -199,7 +216,7 @@ function ApplicationCard({ application, applicationStatuses, updateApplicationSt
           onChange={(e) => updateApplicationStatus(application._id, e.target.value)}
         >
           {applicationStatuses.map((status) => (
-            <option key={status} value={status}>Move to · {status}</option>
+            <option key={status} value={status}>{status}</option>
           ))}
         </select>
       </label>

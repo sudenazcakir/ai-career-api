@@ -22,7 +22,7 @@ function calculateMissingSkills(jobSkills = [], cvSkills = []) {
 }
 
 function average(values) {
-  const clean = values.filter((value) => Number.isFinite(value));
+  const clean = values.filter((value) => Number.isFinite(value) && value > 0);
   if (!clean.length) return null;
   return Math.round(clean.reduce((sum, value) => sum + value, 0) / clean.length);
 }

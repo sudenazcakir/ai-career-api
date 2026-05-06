@@ -1,9 +1,8 @@
-import { FiZap } from "react-icons/fi";
+import { FiRefreshCw } from "react-icons/fi";
 import { Empty } from "../components/common/DataViews";
 import { TrendSummary } from "../components/insights/InsightPanels";
 import { ui } from "../styles/ui";
 
-/* Status → Lattice color mapping */
 const STATUS_BAR = {
   "Saved for Later": { fill: "#6B6B72", label: "Saved" },
   "Under Review":    { fill: "#1E3FFF", label: "Under review" },
@@ -22,6 +21,7 @@ export default function AnalyticsPage({
   const skillFrequency = skillAnalytics?.data || [];
   const meta           = skillAnalytics?.meta;
   const maxMissing     = skillFrequency[0]?.missingCount || 1;
+  const hasAnalytics   = skillFrequency.length > 0 || trendAnalytics?.data;
 
   const statusRows = Object.entries(STATUS_BAR).map(([status, cfg]) => ({
     ...cfg,
@@ -40,8 +40,7 @@ export default function AnalyticsPage({
           aria-hidden="true"
           style={{
             position: "absolute", right: 24, bottom: -48,
-            fontFamily: "var(--font-display)",
-            fontSize: 200, lineHeight: 1,
+            fontFamily: "var(--font-display)", fontSize: 200, lineHeight: 1,
             color: "var(--c-mist)", opacity: 0.28,
             letterSpacing: "-0.02em", pointerEvents: "none", userSelect: "none",
           }}
@@ -60,13 +59,14 @@ export default function AnalyticsPage({
             Skills in demand, <em style={{ fontStyle: "italic" }}>pipeline at a glance.</em>
           </h2>
           <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-[#3A3A40]">
-            Analyse what the market wants against what your CVs offer, and track
-            how your applications progress through each stage.
+            {hasAnalytics
+              ? "Analytics loaded. Refresh to update with the latest job and CV data."
+              : "Analytics load automatically on page visit. Refresh to reload."}
           </p>
           <div className="mt-5">
-            <button className={ui.buttonCobalt} type="button" onClick={loadAnalytics}>
-              <FiZap size={14} strokeWidth={1.5} />
-              Analyse now
+            <button className={ui.buttonGhost} type="button" onClick={loadAnalytics}>
+              <FiRefreshCw size={13} strokeWidth={1.5} />
+              Refresh analytics
             </button>
           </div>
         </div>
@@ -75,10 +75,10 @@ export default function AnalyticsPage({
       {/* ── Metrics strip ─────────────────────────────────────────────── */}
       <div className={`${ui.metrics} col-span-full`}>
         {[
-          { label: "Applications",   value: applications.length },
-          { label: "Jobs in DB",     value: jobs.length },
-          { label: "Recommendations",value: recommendations.length },
-          { label: "Accepted",       value: accepted },
+          { label: "Applications",    value: applications.length },
+          { label: "Jobs in DB",      value: jobs.length },
+          { label: "Recommendations", value: recommendations.length },
+          { label: "Accepted",        value: accepted },
         ].map(({ label, value }) => (
           <div key={label} className={ui.metric}>
             <span className={ui.metricLabel}>{label}</span>
@@ -101,16 +101,17 @@ export default function AnalyticsPage({
               <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
                 Missing skill frequency
               </h2>
-              {meta && (
-                <p className="mt-0.5 text-[12px] text-[#6B6B72]">
-                  {meta.comparisons} comparisons
-                </p>
-              )}
+              <p className="mt-0.5 text-[13px] text-[#6B6B72]">
+                {meta
+                  ? `Skills your CVs are missing across ${meta.comparisons} CV–job comparisons.`
+                  : "Skills required by jobs that your CVs don't currently cover."}
+              </p>
             </div>
-            <button className={ui.buttonCobalt} type="button" onClick={loadAnalytics}>
-              <FiZap size={14} strokeWidth={1.5} />
-              Analyse
-            </button>
+            {meta && (
+              <span className={ui.count} style={{ fontFamily: "var(--font-mono)" }}>
+                {skillFrequency.length} skills
+              </span>
+            )}
           </div>
 
           {skillFrequency.length > 0 ? (
@@ -147,7 +148,7 @@ export default function AnalyticsPage({
               ))}
             </div>
           ) : (
-            <Empty msg="No skill data yet. Click Analyse to load missing skill frequency across your CVs and jobs." />
+            <Empty msg="No skill data yet. Analytics load automatically — refresh if data does not appear." />
           )}
         </section>
 
@@ -159,6 +160,9 @@ export default function AnalyticsPage({
               <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
                 Application pipeline
               </h2>
+              <p className="mt-0.5 text-[13px] text-[#6B6B72]">
+                How your tracked applications are distributed across stages.
+              </p>
             </div>
             <span className={ui.count} style={{ fontFamily: "var(--font-mono)" }}>
               {applications.length} total
@@ -172,16 +176,14 @@ export default function AnalyticsPage({
                   ? Math.round((count / applications.length) * 100)
                   : 0;
                 return (
-                  <div key={status} className="grid items-center gap-2"
-                       style={{ gridTemplateColumns: "110px 1fr 32px" }}>
+                  <div
+                    key={status}
+                    className="grid items-center gap-2"
+                    style={{ gridTemplateColumns: "110px 1fr 32px" }}
+                  >
                     <span
-                      className="truncate text-[10px] font-medium"
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        color: fill,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                      }}
+                      className="truncate text-[10px] font-medium uppercase tracking-[0.05em]"
+                      style={{ fontFamily: "var(--font-mono)", color: fill }}
                     >
                       {label}
                     </span>
@@ -202,7 +204,7 @@ export default function AnalyticsPage({
               })}
             </div>
           ) : (
-            <Empty msg="No applications tracked yet. Save jobs from the Jobs page and move them through stages." />
+            <Empty msg="No applications tracked yet. Save jobs from the Jobs page to start building your pipeline." />
           )}
         </section>
 
@@ -214,20 +216,17 @@ export default function AnalyticsPage({
               <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
                 Market trends
               </h2>
-              <p className="mt-1 text-[13px] text-[#6B6B72]">
-                Job category distribution, salary ranges, and demand signals from loaded jobs.
+              <p className="mt-0.5 text-[13px] text-[#6B6B72]">
+                Job category distribution and salary ranges from live market data.
+                Salary averages exclude listings with no salary information.
               </p>
             </div>
-            <button className={ui.buttonCobalt} type="button" onClick={loadAnalytics}>
-              <FiZap size={14} strokeWidth={1.5} />
-              Analyse now
-            </button>
           </div>
 
           {trendAnalytics?.data ? (
             <TrendSummary data={trendAnalytics.data} />
           ) : (
-            <Empty msg="No trend data yet. Click Analyse now to load market signals from your jobs database." />
+            <Empty msg="No trend data yet. Analytics load automatically — refresh if data does not appear." />
           )}
         </section>
       </div>

@@ -29,6 +29,18 @@ export function buildSkillGaps(jobs, cvSkills) {
     .sort((a, b) => b.count - a.count);
 }
 
+function buildHeroDescription(hasCv, hasJobs, cvTitle, jobCount, gapCount) {
+  if (hasCv && hasJobs) {
+    const jobWord = jobCount === 1 ? "job" : "jobs";
+    const gapWord = gapCount === 1 ? "gap" : "gaps";
+    return gapCount > 0
+      ? `Comparing "${cvTitle}" against ${jobCount} ${jobWord}. ${gapCount} skill ${gapWord} found.`
+      : `Comparing "${cvTitle}" against ${jobCount} ${jobWord}. Your CV covers all job requirements.`;
+  }
+  if (hasJobs) return `${jobCount} jobs loaded. Select a CV to see your skill gaps.`;
+  return "Import jobs and select a CV to map your skill gaps against live market data.";
+}
+
 const CAT_LABELS = {
   technical: "Technical",
   tools:     "Tools & platforms",
@@ -60,6 +72,8 @@ export default function SkillGapPage({ jobs, recommendations, selectedCv, setAct
   const hasJobs = uniqueJobs.length > 0;
   const hasCv   = Boolean(selectedCv);
 
+  const heroDescription = buildHeroDescription(hasCv, hasJobs, selectedCv?.title, uniqueJobs.length, gaps.length);
+
   return (
     <div className="grid gap-[18px]">
 
@@ -89,9 +103,7 @@ export default function SkillGapPage({ jobs, recommendations, selectedCv, setAct
             Where your skills meet <em style={{ fontStyle: "italic" }}>the market.</em>
           </h2>
           <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-[#3A3A40]">
-            {hasJobs
-              ? `Across ${uniqueJobs.length} matched job${uniqueJobs.length !== 1 ? "s" : ""}, here's what you're missing — and what to learn next.`
-              : "Import jobs and select a CV to map your skill gaps against live market data."}
+            {heroDescription}
           </p>
           <div className="mt-5 flex flex-wrap gap-2.5">
             <button className={ui.buttonCobalt} type="button" onClick={() => setActivePage("roadmap")}>

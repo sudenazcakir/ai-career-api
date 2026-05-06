@@ -183,6 +183,11 @@ export function AnalyticsBar({ data }) {
 }
 
 /* ── TrendSummary ────────────────────────────────────────────────────────── */
+function formatSalary(value) {
+  if (!value || value <= 0) return "No data";
+  return `£${Number(value).toLocaleString("en-GB")}`;
+}
+
 export function TrendSummary({ data }) {
   const categories = data.categories?.slice(0, 6) || [];
   const chartData = {
@@ -200,8 +205,8 @@ export function TrendSummary({ data }) {
     <div className={ui.insightStack}>
       <div className={ui.insightMetrics}>
         <Metric label="Jobs"            value={data.totalCount || 0} />
-        <Metric label="Avg min salary"  value={data.averageSalaryMin || "N/A"} />
-        <Metric label="Avg max salary"  value={data.averageSalaryMax || "N/A"} />
+        <Metric label="Avg min salary"  value={formatSalary(data.averageSalaryMin)} />
+        <Metric label="Avg max salary"  value={formatSalary(data.averageSalaryMax)} />
       </div>
       {categories.length ? (
         <div className={ui.chartBoxShort}>

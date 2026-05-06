@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { extractCertificate } from "../../services/careerService";
 import { ui } from "../../styles/ui";
 
 /* ── Select option constants ────────────────────────────────────────────── */
@@ -46,30 +47,39 @@ function serializeProjects(items) {
 }
 
 /* ── Certificates serialization ─────────────────────────────────────────── */
+/* Format (5 fields, backward-compatible with old 3-field data):             */
+/*   Title::Issuer::URL::Date::CredentialID||Title2::...                      */
 const CERT_ITEM_SEP = "||";
 const CERT_FIELD_SEP = "::";
 
+const EMPTY_CERT = { title: "", issuer: "", link: "", date: "", credentialId: "" };
+
 function parseCertificates(str) {
-  if (!str || !str.trim()) return [{ title: "", issuer: "", link: "" }];
+  if (!str || !str.trim()) return [{ ...EMPTY_CERT }];
   if (str.includes(CERT_ITEM_SEP) || str.includes(CERT_FIELD_SEP)) {
     const items = str.split(CERT_ITEM_SEP).map((item) => {
       const parts = item.split(CERT_FIELD_SEP);
       return {
-        title: (parts[0] || "").trim(),
-        issuer: (parts[1] || "").trim(),
-        link: (parts[2] || "").trim(),
+        title:        (parts[0] || "").trim(),
+        issuer:       (parts[1] || "").trim(),
+        link:         (parts[2] || "").trim(),
+        date:         (parts[3] || "").trim(),
+        credentialId: (parts[4] || "").trim(),
       };
     });
-    return items.length > 0 ? items : [{ title: "", issuer: "", link: "" }];
+    return items.length > 0 ? items : [{ ...EMPTY_CERT }];
   }
-  return [{ title: str.trim(), issuer: "", link: "" }];
+  return [{ ...EMPTY_CERT, title: str.trim() }];
 }
 
 function serializeCertificates(items) {
   const filtered = items.filter((c) => c.title.trim() || c.issuer.trim());
   if (filtered.length === 0) return "";
   return filtered
-    .map((c) => `${c.title.trim()}${CERT_FIELD_SEP}${c.issuer.trim()}${CERT_FIELD_SEP}${c.link.trim()}`)
+    .map((c) =>
+      [c.title.trim(), c.issuer.trim(), c.link.trim(), c.date.trim(), c.credentialId.trim()]
+        .join(CERT_FIELD_SEP)
+    )
     .join(CERT_ITEM_SEP);
 }
 
@@ -377,6 +387,14 @@ function CertificatesField({ value, onChange }) {
   const [items, setItems] = useState(() => parseCertificates(value));
   const prevValueRef = useRef(value);
 
+  /* Upload state: idle | loading | preview | error */
+  const [uploadState, setUploadState]       = useState("idle");
+  const [previewEdits, setPreviewEdits]     = useState({ ...EMPTY_CERT });
+  const [previewMessage, setPreviewMessage] = useState("");
+  const [uploadError, setUploadError]       = useState("");
+  const [lowConfidence, setLowConfidence]   = useState(false);
+  const fileInputRef = useRef(null);
+
   useEffect(() => {
     if (value !== prevValueRef.current) {
       const serialized = serializeCertificates(items);
@@ -392,18 +410,59 @@ function CertificatesField({ value, onChange }) {
   }
 
   function addItem() {
-    setItems((prev) => [...prev, { title: "", issuer: "", link: "" }]);
+    setItems((prev) => [...prev, { ...EMPTY_CERT }]);
   }
 
   function removeItem(idx) {
     const next = items.filter((_, i) => i !== idx);
-    const safe = next.length > 0 ? next : [{ title: "", issuer: "", link: "" }];
+    const safe = next.length > 0 ? next : [{ ...EMPTY_CERT }];
     setItems(safe);
     onChange(serializeCertificates(safe));
   }
 
+  async function handleFileSelect(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setUploadState("loading");
+    setUploadError("");
+    try {
+      const result = await extractCertificate(file);
+      const data = result.data || {};
+      setPreviewEdits({
+        title:        data.title        || "",
+        issuer:       data.issuer       || "",
+        link:         data.url          || "",
+        date:         data.issueDate    || "",
+        credentialId: data.credentialId || "",
+      });
+      setPreviewMessage(data.message || "");
+      setLowConfidence(typeof data.confidence === "number" && data.confidence < 0.5);
+      setUploadState("preview");
+    } catch (err) {
+      setUploadError(err.message || "Extraction failed. Please add certificate manually.");
+      setUploadState("error");
+    }
+  }
+
+  function confirmExtracted() {
+    const next = [...items, { ...previewEdits }];
+    setItems(next);
+    onChange(serializeCertificates(next));
+    setUploadState("idle");
+    setPreviewEdits({ ...EMPTY_CERT });
+    setPreviewMessage("");
+  }
+
+  function discardExtracted() {
+    setUploadState("idle");
+    setPreviewEdits({ ...EMPTY_CERT });
+    setPreviewMessage("");
+  }
+
   return (
     <div className="grid gap-3">
+      {/* Certificate list */}
       {items.map((item, idx) => (
         <div key={idx} className="grid gap-2 rounded-[8px] border border-[#E8E3D7] bg-[#F6F3EC] p-3">
           <div className="flex items-center justify-between">
@@ -424,34 +483,108 @@ function CertificatesField({ value, onChange }) {
               </button>
             )}
           </div>
-          <input
-            className={ui.input}
-            placeholder="Certificate title"
-            value={item.title}
-            onChange={(e) => handleChange(idx, "title", e.target.value)}
-          />
-          <input
-            className={ui.input}
-            placeholder="Issuing organization"
-            value={item.issuer}
-            onChange={(e) => handleChange(idx, "issuer", e.target.value)}
-          />
-          <input
-            className={ui.input}
-            placeholder="Certificate URL (optional)"
-            type="url"
-            value={item.link}
-            onChange={(e) => handleChange(idx, "link", e.target.value)}
-          />
+          <input className={ui.input} placeholder="Certificate title"
+            value={item.title} onChange={(e) => handleChange(idx, "title", e.target.value)} />
+          <input className={ui.input} placeholder="Issuing organization"
+            value={item.issuer} onChange={(e) => handleChange(idx, "issuer", e.target.value)} />
+          <input className={ui.input} placeholder="Certificate URL (optional)" type="url"
+            value={item.link} onChange={(e) => handleChange(idx, "link", e.target.value)} />
+          <div className="grid grid-cols-2 gap-2">
+            <input className={ui.input} placeholder="Issue date (optional)"
+              value={item.date} onChange={(e) => handleChange(idx, "date", e.target.value)} />
+            <input className={ui.input} placeholder="Credential ID (optional)"
+              value={item.credentialId} onChange={(e) => handleChange(idx, "credentialId", e.target.value)} />
+          </div>
         </div>
       ))}
-      <button
-        type="button"
-        onClick={addItem}
-        className={`${ui.buttonGhost} w-full justify-center`}
-      >
-        + Add certificate
-      </button>
+
+      {/* Upload panel */}
+      {uploadState === "idle" && (
+        <div className="flex gap-2">
+          <button type="button" onClick={addItem} className={`${ui.buttonGhost} flex-1 justify-center`}>
+            + Add certificate
+          </button>
+          <button
+            type="button"
+            className={ui.buttonGhost}
+            onClick={() => fileInputRef.current?.click()}
+            title="Upload a PDF or image to extract certificate data"
+          >
+            ↑ Upload & extract
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.png,.jpg,.jpeg,.webp"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+        </div>
+      )}
+
+      {uploadState === "loading" && (
+        <div className="flex items-center gap-2 rounded-[8px] border border-[#E8E3D7] bg-[#F6F3EC] px-4 py-3">
+          <span className="text-[13px] text-[#6B6B72]">Extracting certificate data…</span>
+        </div>
+      )}
+
+      {uploadState === "error" && (
+        <div className="grid gap-2 rounded-[8px] border border-[#E8E3D7] bg-[#FBE8E5] px-4 py-3">
+          <p className="text-[13px] text-[#A6261A]">{uploadError}</p>
+          <button type="button" className={ui.buttonGhost} onClick={() => setUploadState("idle")}>
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {uploadState === "preview" && (
+        <div className="grid gap-3 rounded-[8px] border border-[#E8E3D7] bg-[#F6F3EC] p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-[#6B6B72]"
+              style={{ fontFamily: "var(--font-mono)" }}>
+              Extracted preview — review and confirm
+            </span>
+          </div>
+
+          {lowConfidence && (
+            <p className="text-[12px] text-[#9A6712]">
+              Low confidence result — please verify the fields below before adding.
+            </p>
+          )}
+          {previewMessage && (
+            <p className="text-[12px] text-[#6B6B72]">{previewMessage}</p>
+          )}
+
+          <input className={ui.input} placeholder="Certificate title"
+            value={previewEdits.title}
+            onChange={(e) => setPreviewEdits((p) => ({ ...p, title: e.target.value }))} />
+          <input className={ui.input} placeholder="Issuing organization"
+            value={previewEdits.issuer}
+            onChange={(e) => setPreviewEdits((p) => ({ ...p, issuer: e.target.value }))} />
+          <input className={ui.input} placeholder="Certificate URL (optional)" type="url"
+            value={previewEdits.link}
+            onChange={(e) => setPreviewEdits((p) => ({ ...p, link: e.target.value }))} />
+          <div className="grid grid-cols-2 gap-2">
+            <input className={ui.input} placeholder="Issue date"
+              value={previewEdits.date}
+              onChange={(e) => setPreviewEdits((p) => ({ ...p, date: e.target.value }))} />
+            <input className={ui.input} placeholder="Credential ID"
+              value={previewEdits.credentialId}
+              onChange={(e) => setPreviewEdits((p) => ({ ...p, credentialId: e.target.value }))} />
+          </div>
+
+          <div className="flex gap-2">
+            <button type="button" className={`${ui.button} flex-1 justify-center`}
+              onClick={confirmExtracted}
+              disabled={!previewEdits.title.trim() && !previewEdits.issuer.trim()}>
+              Add to certificates
+            </button>
+            <button type="button" className={ui.buttonGhost} onClick={discardExtracted}>
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -55,6 +55,7 @@ const analysisRoutes = require("./routes/analysisRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const careerMatrixRoutes = require("./routes/careerMatrixRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
+const certificateRoutes = require("./routes/certificateRoutes");
 
 app.use("/api", authRoutes);
 app.use("/api", requireAuth);
@@ -72,6 +73,7 @@ app.use("/api", analysisRoutes);
 app.use("/api", analyticsRoutes);
 app.use("/api", careerMatrixRoutes);
 app.use("/api", applicationRoutes);
+app.use("/api", certificateRoutes);
 
 // Server
 const server = app.listen(PORT, () => {
