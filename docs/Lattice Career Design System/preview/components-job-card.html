@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Job result card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { padding: 18px; }
+.job {
+  display: grid; grid-template-columns: 1fr auto; gap: 16px;
+  border: 1px solid var(--border-1); border-radius: var(--radius-lg);
+  background: var(--c-paper); padding: 16px 18px;
+}
+.job h3 { font: 600 17px/1.25 var(--font-sans); color: var(--c-ink); margin: 0 0 4px; letter-spacing: -0.005em; }
+.job .meta { font: 400 13px/1.4 var(--font-sans); color: var(--c-slate); margin-bottom: 10px; }
+.bars { display: grid; gap: 4px; margin-top: 10px; }
+.bar { display: grid; grid-template-columns: 70px 1fr 28px; align-items: center; gap: 8px; }
+.bar .lbl { font: 500 10px/1 var(--font-mono); letter-spacing: .04em; color: var(--c-slate); text-transform: uppercase; }
+.bar .track { height: 4px; background: var(--c-hairline); border-radius: 2px; overflow: hidden; }
+.bar .fill { height: 100%; background: var(--c-ink); border-radius: 2px; }
+.bar .v { font: 500 11px/1 var(--font-mono); color: var(--c-graphite); text-align: right; }
+.score-pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 56px; height: 28px; padding: 0 10px;
+  border-radius: var(--radius-sm); font: 600 13px/1 var(--font-sans);
+  background: var(--c-citron); color: var(--c-ink);
+}
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.chip { display: inline-flex; height: 22px; padding: 0 8px; align-items: center; border-radius: 3px; font: 400 11px/1 var(--font-mono); }
+.chip.m { background: var(--c-success-50); color: var(--c-success); }
+.chip.x { background: var(--c-plum-50); color: var(--c-plum); }
+</style></head>
+<body>
+<article class="job">
+  <div>
+    <h3>Backend Engineer · Adzuna</h3>
+    <p class="meta">Hexa Labs · İstanbul · Mid-level</p>
+    <div class="chips">
+      <span class="chip m">java</span><span class="chip m">sql</span><span class="chip m">docker</span>
+      <span class="chip x">kubernetes</span><span class="chip x">terraform</span>
+    </div>
+    <div class="bars">
+      <div class="bar"><span class="lbl">Skill</span><div class="track"><div class="fill" style="width:84%"></div></div><span class="v">84</span></div>
+      <div class="bar"><span class="lbl">Role</span><div class="track"><div class="fill" style="width:72%;background:var(--c-cobalt)"></div></div><span class="v">72</span></div>
+      <div class="bar"><span class="lbl">Exp</span><div class="track"><div class="fill" style="width:65%;background:var(--c-slate)"></div></div><span class="v">65</span></div>
+    </div>
+  </div>
+  <div style="display:grid;align-content:start;gap:6px;justify-items:end">
+    <span class="score-pill">86%</span>
+    <span style="font:500 10px/1 var(--font-mono);letter-spacing:.04em;color:var(--c-slate);text-transform:uppercase">Mid level</span>
+  </div>
+</article>
+</body></html>

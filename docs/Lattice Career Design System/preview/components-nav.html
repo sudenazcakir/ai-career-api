@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Sidebar nav</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { padding: 0; background: var(--c-bone); }
+.nav { padding: 18px 14px; display: grid; gap: 4px; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 14px; border-bottom: 1px solid var(--border-1); margin-bottom: 10px; }
+.brand img { width: 22px; height: 22px; }
+.brand strong { font: 600 16px/1 var(--font-sans); letter-spacing: -0.01em; color: var(--c-ink); }
+.section { font: 500 10px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--c-slate); padding: 10px 12px 4px; }
+.item {
+  display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px;
+  border-radius: var(--radius-md); position: relative;
+  font: 500 14px/1 var(--font-sans); color: var(--c-graphite);
+}
+.item .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--c-mist); }
+.item.active { background: var(--c-cobalt-50); color: var(--c-cobalt); }
+.item.active .dot { background: var(--c-cobalt); }
+.item.active::before { content: ''; position: absolute; left: -14px; top: 6px; bottom: 6px; width: 2px; background: var(--c-ink); }
+</style></head>
+<body>
+<nav class="nav">
+  <div class="brand"><img src="../assets/logo-mark.svg" alt=""><strong>Lattice</strong></div>
+  <span class="section">Workspace</span>
+  <a class="item"><span class="dot"></span>Dashboard</a>
+  <a class="item active"><span class="dot"></span>Jobs</a>
+  <a class="item"><span class="dot"></span>My CVs</a>
+  <span class="section">Growth</span>
+  <a class="item"><span class="dot"></span>Skill gaps</a>
+  <a class="item"><span class="dot"></span>Roadmap</a>
+</nav>
+</body></html>

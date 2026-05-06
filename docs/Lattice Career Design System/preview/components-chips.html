@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Skill chips</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { padding: 18px; display: grid; gap: 14px; }
+.label { font: 500 11px/1 var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--fg-3); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 26px; padding: 0 10px;
+  border-radius: var(--radius-sm); border: 1px solid transparent;
+  font: 400 12px/1 var(--font-mono);
+}
+.chip.matched { background: var(--c-success-50); color: var(--c-success); }
+.chip.partial { background: var(--c-warning-50); color: var(--c-warning); }
+.chip.missing { background: var(--c-plum-50); color: var(--c-plum); }
+.chip.neutral { background: var(--c-paper); color: var(--c-graphite); border-color: var(--border-1); }
+</style></head>
+<body>
+<div><div class="label">Matched skills</div><div class="chips">
+  <span class="chip matched">java</span><span class="chip matched">sql</span><span class="chip matched">docker</span><span class="chip matched">git</span>
+</div></div>
+<div><div class="label">Partial · transferable</div><div class="chips">
+  <span class="chip partial">postgres</span><span class="chip partial">aws</span>
+</div></div>
+<div><div class="label">Missing · plum (skill gap)</div><div class="chips">
+  <span class="chip missing">kubernetes</span><span class="chip missing">terraform</span><span class="chip missing">grpc</span>
+</div></div>
+<div><div class="label">Neutral · CV listing</div><div class="chips">
+  <span class="chip neutral">react</span><span class="chip neutral">node</span><span class="chip neutral">mongodb</span><span class="chip neutral">tailwind</span>
+</div></div>
+</body></html>

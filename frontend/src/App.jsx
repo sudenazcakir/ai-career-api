@@ -1,5 +1,9 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import {
+  FiBarChart2, FiBriefcase, FiColumns, FiFileText,
+  FiLayout, FiMap, FiTarget, FiUser, FiZap,
+} from "react-icons/fi";
+import {
   defaultMatch,
   emptyPassport,
   emptyUser,
@@ -52,7 +56,7 @@ import {
   trackApplication,
   updateApplicationStatus,
 } from "./services/careerService";
-import { authBg, ui } from "./styles/ui";
+import { ui } from "./styles/ui";
 import {
   firstError,
   friendlyErrorMessage,
@@ -62,6 +66,18 @@ import {
   splitSkills,
   validateAuthForm,
 } from "./utils/validation";
+
+const NAV_ICONS = {
+  overview:     FiLayout,
+  jobs:         FiBriefcase,
+  cv:           FiFileText,
+  skillgap:     FiTarget,
+  roadmap:      FiMap,
+  applications: FiColumns,
+  analytics:    FiBarChart2,
+  insights:     FiZap,
+  account:      FiUser,
+};
 
 const DEFAULT_AUTHENTICATED_PATH = "/dashboard";
 const protectedPaths = pages.map((page) => page.path);
@@ -198,11 +214,29 @@ export default function App() {
     setApplications(data.data || []);
   }
 
-  function handleTrackApplication(jobId, cvId, status = "Under Review") {
-    if (!cvId) { setStatus("Select a CV first"); return; }
-    runAction(status === "Saved for Later" ? "Saving for later" : "Tracking application", async () => {
+  function handleTrackApplication(jobOrJobId, cvIdOrStatus, nextStatus = "Under Review") {
+    const status = applicationStatuses.includes(cvIdOrStatus)
+      ? cvIdOrStatus
+      : nextStatus;
+    const jobId = typeof jobOrJobId === "object" ? jobOrJobId?._id : jobOrJobId;
+    const cvId = applicationStatuses.includes(cvIdOrStatus)
+      ? selectedCvId
+      : cvIdOrStatus || selectedCvId;
+
+    if (!jobId) {
+      setStatus("Select a saved job first");
+      return false;
+    }
+    if (!cvId) {
+      setStatus("Select a CV first");
+      return false;
+    }
+
+    return runAction(status === "Saved for Later" ? "Saving for later" : "Tracking application", async () => {
       await trackApplication({ jobId, cvId, status });
       await loadApplications();
+      setStatus(status === "Saved for Later" ? "Saved for later" : "Application tracked");
+      return true;
     });
   }
 
@@ -367,10 +401,12 @@ export default function App() {
     try {
       setPendingAction(label);
       setStatus(label);
-      await action();
+      const result = await action();
+      return result ?? true;
     } catch (error) {
-      if (error.status === 401) return; // handler already fired via setUnauthorizedHandler
+      if (error.status === 401) return false; // handler already fired via setUnauthorizedHandler
       setStatus(error.message);
+      return false;
     } finally {
       setPendingAction("");
     }
@@ -550,7 +586,7 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className={`min-h-screen ${authBg}`}>
+      <div className="min-h-screen bg-[#F6F3EC]">
         <Routes>
           <Route
             path="/login"
@@ -624,53 +660,68 @@ export default function App() {
   return (
     <div className={ui.shell}>
       <aside className={ui.sidebar}>
+        {/* Brand */}
         <div className={ui.brand}>
-          <span className={ui.brandMark}>AC</span>
-          <div>
-            <strong>AI Career OS</strong>
-            <small className="block text-slate-500">Matching workspace</small>
-          </div>
+          {/* Lattice 2×2 grid mark */}
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <rect x="1" y="1" width="8" height="8" fill="#0E0E10"/>
+            <rect x="11" y="1" width="8" height="8" fill="none" stroke="#E8E3D7" strokeWidth="1.2"/>
+            <rect x="1" y="11" width="8" height="8" fill="none" stroke="#E8E3D7" strokeWidth="1.2"/>
+            <rect x="11" y="11" width="8" height="8" fill="#0E0E10"/>
+          </svg>
+          <strong style={{ fontFamily: "var(--font-sans)", fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--c-ink)" }}>
+            Lattice
+          </strong>
         </div>
 
+        {/* Nav */}
         <nav className={ui.nav}>
-          <p className="px-3 pt-3 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Workspace</p>
-          {pages.filter((p) => p.section === "workspace").map((page) => (
-            <NavLink
-              className={({ isActive }) =>
-                `${ui.navButton} ${isActive ? ui.navButtonActive : ""}`
-              }
-              key={page.id}
-              onClick={(event) => handleRouteClick(event, page.path)}
-              to={page.path}
-            >
-              {page.label}
-            </NavLink>
-          ))}
-          <p className="px-3 pt-4 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Growth</p>
-          {pages.filter((p) => p.section === "growth").map((page) => (
-            <NavLink
-              className={({ isActive }) =>
-                `${ui.navButton} ${isActive ? ui.navButtonActive : ""}`
-              }
-              key={page.id}
-              onClick={(event) => handleRouteClick(event, page.path)}
-              to={page.path}
-            >
-              {page.label}
-            </NavLink>
-          ))}
-          <p className="px-3 pt-4 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Applications</p>
-          {pages.filter((p) => p.section === "apply").map((page) => (
-            <NavLink
-              className={({ isActive }) =>
-                `${ui.navButton} ${isActive ? ui.navButtonActive : ""}`
-              }
-              key={page.id}
-              onClick={(event) => handleRouteClick(event, page.path)}
-              to={page.path}
-            >
-              {page.label}
-            </NavLink>
+          {[
+            { label: "WORKSPACE", section: "workspace" },
+            { label: "GROWTH",    section: "growth" },
+            { label: "APPLY",     section: "apply" },
+          ].map(({ label, section }) => (
+            <div key={section} className="mb-3">
+              <p className="px-3 pb-1.5 pt-3 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B6B72]"
+                 style={{ fontFamily: "var(--font-mono)" }}>
+                {label}
+              </p>
+              {pages.filter((p) => p.section === section).map((page) => {
+                const Icon = NAV_ICONS[page.id];
+                return (
+                  <NavLink
+                    className={({ isActive }) =>
+                      `${ui.navButton} ${isActive ? ui.navButtonActive : ""}`
+                    }
+                    key={page.id}
+                    onClick={(event) => handleRouteClick(event, page.path)}
+                    style={({ isActive }) => isActive
+                      ? { position: "relative", background: "var(--c-cobalt-50)", color: "var(--c-cobalt)" }
+                      : {}}
+                    to={page.path}
+                  >
+                    {({ isActive }) => (
+                      <>
+                        {isActive && (
+                          <span style={{
+                            position: "absolute", left: -14, top: 6, bottom: 6,
+                            width: 2, background: "var(--c-cobalt)", borderRadius: 1,
+                          }} />
+                        )}
+                        {Icon && (
+                          <Icon
+                            size={15}
+                            strokeWidth={1.5}
+                            style={{ flexShrink: 0, opacity: isActive ? 1 : 0.65 }}
+                          />
+                        )}
+                        {page.label}
+                      </>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
           ))}
         </nav>
 
@@ -680,17 +731,15 @@ export default function App() {
           target="_blank"
           rel="noreferrer"
         >
-          Open Swagger
+          API docs
         </a>
       </aside>
 
       <main className={ui.workspace}>
         <header className={ui.header}>
           <div>
-            <p className={ui.eyebrow}>Live backend demo</p>
-            <h1 className={ui.pageTitle}>
-              {pageTitle}
-            </h1>
+            <p className={ui.eyebrow}>AI Career OS</p>
+            <h1 className={ui.pageTitle}>{pageTitle}</h1>
           </div>
           <div className={ui.headerActions}>
             <div className={ui.pulse}>
@@ -748,11 +797,15 @@ export default function App() {
                 <JobsPage
                   filterForm={filterForm}
                   setFilterForm={setFilterForm}
+                  cvs={cvs}
                   selectedCv={selectedCv}
+                  selectedCvId={selectedCvId}
+                  setSelectedCvId={setSelectedCvId}
                   jobs={jobs}
                   fetchJobs={fetchJobs}
                   filterJobs={filterJobs}
                   loadRecommendations={loadRecommendations}
+                  trackApplication={handleTrackApplication}
                   isBusy={isBusy}
                 />
               }

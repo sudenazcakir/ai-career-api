@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Score &amp; status badges</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { padding: 18px; display: grid; gap: 16px; }
+.label { font: 500 11px/1 var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--fg-3); margin-bottom: 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.score {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 56px; height: 28px; padding: 0 10px;
+  border-radius: var(--radius-sm); font: 600 13px/1 var(--font-sans);
+}
+.score.high { background: var(--c-citron); color: var(--c-ink); }
+.score.mid  { background: var(--c-warning-50); color: var(--c-warning); }
+.score.low  { background: var(--c-danger-50); color: var(--c-danger); }
+
+.status {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 24px; padding: 0 10px; border-radius: 999px;
+  font: 500 12px/1 var(--font-sans);
+  border: 1px solid currentColor;
+}
+.status::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+.status.s-saved    { color: var(--c-info); }
+.status.s-review   { color: var(--c-warning); }
+.status.s-accepted { color: var(--c-success); }
+.status.s-rejected { color: var(--c-danger); }
+</style></head>
+<body>
+<div>
+  <div class="label">Match score · Citron above 75, warning 50–74, danger below</div>
+  <div class="row">
+    <span class="score high">92%</span>
+    <span class="score high">86%</span>
+    <span class="score mid">68%</span>
+    <span class="score mid">54%</span>
+    <span class="score low">31%</span>
+  </div>
+</div>
+<div>
+  <div class="label">Application status</div>
+  <div class="row">
+    <span class="status s-saved">Saved for Later</span>
+    <span class="status s-review">Under Review</span>
+    <span class="status s-accepted">Accepted</span>
+    <span class="status s-rejected">Rejected</span>
+  </div>
+</div>
+</body></html>

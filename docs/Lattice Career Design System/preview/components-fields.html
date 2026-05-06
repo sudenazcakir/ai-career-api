@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Form fields</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { padding: 18px; display: grid; gap: 14px; }
+.field { display: grid; gap: 6px; }
+.field label { font: 500 12px/1.2 var(--font-sans); color: var(--fg-2); }
+.input {
+  height: 40px; padding: 0 12px; border-radius: var(--radius-md);
+  border: 1px solid var(--border-1); background: var(--c-chalk);
+  font: 400 14px/1 var(--font-sans); color: var(--fg-1);
+}
+.input.focus { outline: 2px solid var(--c-cobalt); outline-offset: 2px; border-color: var(--c-cobalt); }
+.input.err   { border-color: var(--c-danger); }
+.help-err { font: 500 11px/1.2 var(--font-sans); color: var(--c-danger); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.toggle {
+  width: 36px; height: 20px; background: var(--c-mist); border-radius: 999px; position: relative;
+}
+.toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 999px; background: var(--c-bone); }
+.toggle.on { background: var(--c-ink); }
+.toggle.on::after { left: 18px; }
+.tg-row { display: flex; align-items: center; gap: 10px; font: 500 13px var(--font-sans); }
+</style></head>
+<body>
+<div class="row">
+  <div class="field">
+    <label>Email</label>
+    <input class="input" value="ada@example.com" readonly>
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <input class="input focus" type="password" value="••••••••" readonly>
+  </div>
+</div>
+<div class="field">
+  <label>Phone (with error)</label>
+  <input class="input err" value="0532" readonly>
+  <span class="help-err">Enter a valid 10-digit phone number.</span>
+</div>
+<div class="tg-row"><span class="toggle on"></span> Notify me when new high-match jobs are imported</div>
+</body></html>

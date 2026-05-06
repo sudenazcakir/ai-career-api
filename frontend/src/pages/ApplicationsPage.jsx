@@ -1,6 +1,14 @@
 import { FiBriefcase, FiSearch } from "react-icons/fi";
-import { Empty, JobList } from "../components/shared";
+import { Empty, JobList } from "../components/common/DataViews";
 import { ui } from "../styles/ui";
+
+/* Pill style per status — matches lat-status-pill from design system */
+const STATUS_PILL = {
+  "Saved for Later": { bg: "#F6F3EC", color: "#3A3A40", border: "1px solid #E8E3D7" },
+  "Under Review":    { bg: "#E6EBFF", color: "#1E3FFF", border: "none" },
+  "Accepted":        { bg: "#E5F4EC", color: "#0E7C4A", border: "none" },
+  "Rejected":        { bg: "#EFE5F8", color: "#5B2A86", border: "none" },
+};
 
 export default function ApplicationsPage({
   applications,
@@ -15,92 +23,140 @@ export default function ApplicationsPage({
     items: applications.filter((a) => a.status === status),
   }));
 
+  const accepted = applications.filter((a) => a.status === "Accepted").length;
+  const pending  = applications.filter((a) => a.status === "Under Review").length;
+
   return (
-    <div className="grid gap-5">
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="mb-2 text-xs font-black uppercase tracking-normal text-teal-700">
-              Application Tracker
-            </p>
-            <h2 className="text-3xl font-black text-slate-950">
+    <div className="grid gap-[18px]">
+
+      {/* ── Header ───────────────────────────────────────────────────── */}
+      <section className={ui.panel}>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0">
+            <p className={ui.eyebrow}>Apply · Application Tracker</p>
+            <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.01em] text-[#0E0E10]">
               Move opportunities through your pipeline.
             </h2>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-1.5 text-[13px] text-[#6B6B72]">
               Save roles for later, track submitted applications, and update outcomes.
             </p>
           </div>
           <button
             type="button"
-            className={`${ui.button} inline-flex items-center justify-center gap-2`}
+            className={ui.buttonCobalt}
+            style={{ flexShrink: 0 }}
             onClick={() => setActivePage("jobs")}
           >
-            <FiBriefcase className="h-4 w-4 shrink-0" />
-            Add or Save Job
+            <FiBriefcase size={14} strokeWidth={1.5} />
+            Browse jobs
           </button>
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-4">
-        {columns.map((column) => (
-          <div
-            className="grid min-h-[360px] content-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4"
-            key={column.status}
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
-              <h2 className="text-lg font-black text-slate-900">{column.status}</h2>
-              <span className="rounded-full bg-white px-3 py-1 text-sm font-black text-teal-700 shadow-sm">
-                {column.items.length}
-              </span>
-            </div>
-
-            {column.items.length ? (
-              <div className="grid gap-3">
-                {column.items.map((application) => (
-                  <ApplicationCard
-                    application={application}
-                    applicationStatuses={applicationStatuses}
-                    key={application._id}
-                    updateApplicationStatus={updateApplicationStatus}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="rounded-xl border border-dashed border-slate-300 bg-white/70 p-4 text-sm font-semibold text-slate-500">
-                No applications in this stage.
-              </p>
-            )}
+      {/* ── Metrics strip ─────────────────────────────────────────────── */}
+      <div className={`${ui.metrics} col-span-full`}>
+        {[
+          { label: "Total",        value: applications.length },
+          { label: "Under review", value: pending },
+          { label: "Accepted",     value: accepted },
+          { label: "Saved",        value: applications.filter((a) => a.status === "Saved for Later").length },
+        ].map(({ label, value }) => (
+          <div key={label} className={ui.metric}>
+            <span className={ui.metricLabel}>{label}</span>
+            <strong className={ui.metricValue}>{value}</strong>
           </div>
         ))}
-      </section>
+      </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      {/* ── Kanban ───────────────────────────────────────────────────── */}
+      {applications.length === 0 ? (
+        <section className={ui.panel}>
+          <Empty msg="No applications yet. Save a job from the Jobs page to start tracking." />
+          <div className="mt-4 flex justify-center">
+            <button type="button" className={ui.buttonCobalt} onClick={() => setActivePage("jobs")}>
+              Browse jobs
+            </button>
+          </div>
+        </section>
+      ) : (
+        <section className="grid grid-cols-4 gap-3.5 max-xl:grid-cols-2 max-sm:grid-cols-1">
+          {columns.map((column) => {
+            const meta = STATUS_PILL[column.status] || STATUS_PILL["Saved for Later"];
+            return (
+              <div
+                key={column.status}
+                className="flex min-h-[320px] flex-col overflow-hidden rounded-[12px] border border-[#E8E3D7] bg-[#FBFAF6]"
+              >
+                {/* Column header — StatusPill badge + count */}
+                <div className="flex items-center justify-between border-b border-[#E8E3D7] px-3 py-2.5">
+                  <span
+                    className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+                    style={{
+                      background: meta.bg,
+                      color: meta.color,
+                      border: meta.border,
+                      fontFamily: "var(--font-sans)",
+                    }}
+                  >
+                    {column.status}
+                  </span>
+                  <span
+                    className="text-[11px] font-medium text-[#6B6B72]"
+                    style={{ fontFamily: "var(--font-mono)" }}
+                  >
+                    {column.items.length}
+                  </span>
+                </div>
+
+                {/* Column body */}
+                <div className="flex flex-1 flex-col gap-2.5 p-3">
+                  {column.items.length === 0 ? (
+                    <p className="pt-4 text-center text-[12px] text-[#A4A4AC]">
+                      No applications in this stage.
+                    </p>
+                  ) : (
+                    column.items.map((application) => (
+                      <ApplicationCard
+                        key={application._id}
+                        application={application}
+                        applicationStatuses={applicationStatuses}
+                        updateApplicationStatus={updateApplicationStatus}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </section>
+      )}
+
+      {/* ── Similar roles ─────────────────────────────────────────────── */}
+      <section className={ui.panel}>
         <div className={ui.sectionHead}>
           <div>
-            <p className="mb-1 text-xs font-black uppercase tracking-normal text-teal-700">
-              Similar roles
-            </p>
-            <h2 className="text-2xl font-black text-slate-950">
+            <p className={ui.eyebrow}>Similar roles</p>
+            <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
               Based on your application history
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Roles similar to what you've applied for before.
+            <p className="mt-1 text-[13px] text-[#6B6B72]">
+              Roles similar to what you&apos;ve applied for before.
             </p>
           </div>
           <button
             type="button"
-            className={`${ui.buttonGhost} inline-flex items-center justify-center gap-2`}
+            className={ui.buttonSecondary}
             onClick={loadSimilarApplications ?? undefined}
             disabled={!loadSimilarApplications}
           >
-            <FiSearch className="h-4 w-4 shrink-0" />
-            Find Similar Roles
+            <FiSearch size={14} strokeWidth={1.5} />
+            Find similar roles
           </button>
         </div>
         {similarApplications.length > 0 ? (
           <JobList items={similarApplications} />
         ) : (
-          <Empty />
+          <Empty msg="No similar roles yet. Apply to more jobs to surface recommendations." />
         )}
       </section>
     </div>
@@ -108,30 +164,42 @@ export default function ApplicationsPage({
 }
 
 function ApplicationCard({ application, applicationStatuses, updateApplicationStatus }) {
+  const skills = (application.job?.skills || []).slice(0, 5);
+
   return (
-    <article className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div>
-        <h3 className="mb-1 text-base font-black text-slate-950">
+    <article className="grid gap-3 rounded-[8px] border border-[#E8E3D7] bg-[#F6F3EC] p-3">
+      <div className="min-w-0">
+        <h3 className="text-[13px] font-semibold text-[#0E0E10]">
           {application.job?.title || "Unknown role"}
         </h3>
-        <p className="mb-3 text-sm text-slate-500">
-          {application.job?.company || "Unknown company"} · CV:{" "}
-          {application.cv?.title || "Unknown CV"}
+        <p className="mt-0.5 text-[12px] text-[#6B6B72]">
+          {application.job?.company || "Unknown company"}
+          {application.cv?.title && ` · ${application.cv.title}`}
         </p>
-        <div className="chips">
-          {(application.job?.skills || []).slice(0, 5).map((skill) => (
-            <span key={skill}>{skill}</span>
-          ))}
-        </div>
+        {skills.length > 0 && (
+          <div className={`${ui.chips} mt-2`}>
+            {skills.map((skill) => (
+              <span key={skill} className={ui.chip}>{skill}</span>
+            ))}
+          </div>
+        )}
       </div>
-      <label>
-        Move to
+
+      <label className="grid gap-1">
+        <span
+          className="text-[9px] font-medium uppercase tracking-[0.06em] text-[#A4A4AC]"
+          style={{ fontFamily: "var(--font-mono)" }}
+        >
+          Move to
+        </span>
         <select
+          className={ui.input}
+          style={{ height: 30, fontSize: 12, paddingLeft: 8 }}
           value={application.status}
           onChange={(e) => updateApplicationStatus(application._id, e.target.value)}
         >
           {applicationStatuses.map((status) => (
-            <option key={status} value={status}>{status}</option>
+            <option key={status} value={status}>Move to · {status}</option>
           ))}
         </select>
       </label>

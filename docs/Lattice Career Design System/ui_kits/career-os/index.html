@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lattice · Career OS UI kit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="career-os.css">
+<style>
+  /* index-only chrome */
+  .kit-toolbar {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; gap: 4px;
+    padding: 10px 16px;
+    background: var(--c-paper);
+    border-bottom: 1px solid var(--border-1);
+  }
+  .kit-toolbar .brand {
+    display: flex; align-items: center; gap: 8px;
+    font: 600 14px/1 var(--font-sans); color: var(--c-ink);
+    margin-right: 18px;
+  }
+  .kit-toolbar button {
+    border: 0; background: transparent; height: 30px; padding: 0 12px;
+    border-radius: var(--radius-md);
+    font: 500 12px/1 var(--font-sans); color: var(--c-slate);
+  }
+  .kit-toolbar button.on { background: var(--c-bone); color: var(--c-ink); }
+  .kit-toolbar .meta { margin-left: auto; font: 500 11px/1 var(--font-mono); letter-spacing: .04em; color: var(--c-slate); text-transform: uppercase; }
+  .kit-stage { min-height: calc(100vh - 51px); }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React + Babel (pinned) -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <!-- Lucide icons (cdn) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Components -->
+  <script type="text/babel" src="Layout.jsx"></script>
+  <script type="text/babel" src="Primitives.jsx"></script>
+  <script type="text/babel" src="Dashboard.jsx"></script>
+  <script type="text/babel" src="JobsPage.jsx"></script>
+  <script type="text/babel" src="ApplicationsPage.jsx"></script>
+  <script type="text/babel" src="AuthPage.jsx"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const SCREENS = [
+      { id: "auth",         label: "Auth",         render: (p) => <AuthPage onSignIn={() => p.setScreen("dashboard")}/>, chrome: false },
+      { id: "dashboard",    label: "Dashboard",    render: (p) => <Dashboard goto={p.setScreen}/>,                        chrome: true },
+      { id: "jobs",         label: "Jobs",         render: ()  => <JobsPage/>,                                            chrome: true },
+      { id: "applications", label: "Applications", render: ()  => <ApplicationsPage/>,                                    chrome: true },
+    ];
+
+    function App() {
+      const [screen, setScreen] = useState("dashboard");
+      const cur = SCREENS.find(s => s.id === screen);
+
+      useEffect(() => {
+        if (window.lucide) window.lucide.createIcons();
+      });
+
+      return (
+        <div data-screen-label={cur.label}>
+          <div className="kit-toolbar">
+            <span className="brand">
+              <img src="../../assets/logo-mark.svg" alt="" width="20" height="20"/>
+              Lattice · Career OS
+            </span>
+            {SCREENS.map(s => (
+              <button key={s.id}
+                className={screen === s.id ? "on" : ""}
+                onClick={() => setScreen(s.id)}>
+                {s.label}
+              </button>
+            ))}
+            <span className="meta">UI kit v0.1</span>
+          </div>
+
+          <div className="kit-stage">
+            {cur.chrome ? (
+              <div className="lat-shell">
+                <Sidebar active={screen} onNav={setScreen}/>
+                <div className="lat-main">
+                  <TopBar
+                    eyebrow={cur.label}
+                    title={
+                      screen === "dashboard"    ? "Welcome back, Ada." :
+                      screen === "jobs"         ? "Find your next role." :
+                                                  "Track your pipeline."
+                    }
+                    status="Live · Adzuna sync"
+                    onNav={setScreen}
+                  />
+                  {cur.render({ setScreen })}
+                </div>
+              </div>
+            ) : cur.render({ setScreen })}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>

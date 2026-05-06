@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { FiCamera } from "react-icons/fi";
+import { FiCamera, FiEdit2, FiLogOut } from "react-icons/fi";
 import CareerMatrixPanel from "../components/account/CareerMatrixPanel";
 import PassportForm from "../components/forms/PassportForm";
 import PhoneField from "../components/forms/PhoneField";
 import { getCareerMatrix } from "../services/careerService";
-import { accountBg, ui } from "../styles/ui";
+import { ui } from "../styles/ui";
 import { buildCareerMatrix } from "../utils/careerMatrix";
 import { normalizePhoneNumber } from "../utils/validation";
 
@@ -72,7 +72,7 @@ export default function AccountPage({
 
   return (
     <div className="grid gap-4">
-      <section className={`${ui.accountHero} ${accountBg}`}>
+      <section className={ui.accountHero}>
         <label className={ui.avatarEditor}>
           {renderAvatar(accountForm, ui.accountAvatar)}
           <input
@@ -86,13 +86,14 @@ export default function AccountPage({
           </span>
         </label>
         <div className="min-w-0">
-          <p className="mb-2 text-xs font-black uppercase text-[#d9eeea]">My Account</p>
-          <h2 className="break-words text-[clamp(30px,4vw,42px)] font-black leading-none">
+          <p className={ui.eyebrow}>My account</p>
+          <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.01em] text-[#0E0E10]">
             {user.firstName} {user.lastName}
           </h2>
-          <p className="mt-2 break-words text-[#d9eeea]">{user.email}</p>
+          <p className="mt-1 text-[13px] text-[#6B6B72]">{user.email}</p>
         </div>
-        <button className={ui.buttonGhost} disabled={isBusy} type="button" onClick={signOut}>
+        <button className={ui.buttonSecondary} disabled={isBusy} type="button" onClick={signOut}>
+          <FiLogOut size={14} strokeWidth={1.5} />
           Sign out
         </button>
       </section>
@@ -117,7 +118,7 @@ export default function AccountPage({
       <section className={ui.panel}>
         <div className={ui.sectionHead}>
           <div>
-            <h2 className="text-2xl font-black">Personal details</h2>
+            <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">Personal details</h2>
             <p className={ui.muted}>Keep your contact information current.</p>
           </div>
         </div>
@@ -184,18 +185,19 @@ export default function AccountPage({
         <div className={ui.sectionHead}>
           <div>
             <p className={ui.eyebrow}>Career Passport</p>
-            <h2 className="text-2xl font-black">Professional profile</h2>
+            <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">Professional profile</h2>
             <p className={ui.muted}>
               Open the editor when you want to update your career data.
             </p>
           </div>
           <button
-            className={ui.button}
+            className={ui.buttonCobalt}
             disabled={isBusy}
             type="button"
             onClick={() => setIsPassportModalOpen(true)}
           >
-            Edit Professional Profile
+            <FiEdit2 size={14} strokeWidth={1.5} />
+            Edit passport
           </button>
         </div>
 
@@ -225,7 +227,7 @@ export default function AccountPage({
             <div className={ui.modalHead}>
               <div>
                 <p className={ui.eyebrow}>Career Passport</p>
-                <h2 className="text-2xl font-black">Edit professional profile</h2>
+                <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">Edit professional profile</h2>
               </div>
               <button
                 className={ui.buttonGhost}

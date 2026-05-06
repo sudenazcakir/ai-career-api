@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Iconography</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body { padding: 18px; }
+.head { font: 500 11px/1 var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--c-slate); margin-bottom: 12px; }
+.grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 16px; }
+.cell { display: grid; gap: 6px; justify-items: center; align-content: start; }
+.cell svg { width: 22px; height: 22px; color: var(--c-ink); stroke-width: 1.5; }
+.cell .l { font: 400 10px/1.1 var(--font-mono); color: var(--c-slate); text-align: center; }
+.foot { margin-top: 14px; font: 400 12px/1.4 var(--font-sans); color: var(--c-slate); }
+</style></head>
+<body>
+<div class="head">Lucide · 22px · 1.5 stroke · currentColor</div>
+<div class="grid">
+  <div class="cell"><i data-lucide="briefcase"></i><span class="l">briefcase</span></div>
+  <div class="cell"><i data-lucide="zap"></i><span class="l">zap</span></div>
+  <div class="cell"><i data-lucide="target"></i><span class="l">target</span></div>
+  <div class="cell"><i data-lucide="search"></i><span class="l">search</span></div>
+  <div class="cell"><i data-lucide="user"></i><span class="l">user</span></div>
+  <div class="cell"><i data-lucide="bar-chart-2"></i><span class="l">bar-chart</span></div>
+  <div class="cell"><i data-lucide="check-circle-2"></i><span class="l">check</span></div>
+  <div class="cell"><i data-lucide="alert-circle"></i><span class="l">alert</span></div>
+</div>
+<p class="foot">Swap <code style="font-family:var(--font-mono);font-size:11px;background:var(--c-paper);padding:1px 4px;border-radius:3px">react-icons/fi</code> for <code style="font-family:var(--font-mono);font-size:11px;background:var(--c-paper);padding:1px 4px;border-radius:3px">lucide-react</code> when porting.</p>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>lucide.createIcons();</script>
+</body></html>
