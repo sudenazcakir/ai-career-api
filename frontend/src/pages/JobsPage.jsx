@@ -1,6 +1,16 @@
-import { FiDownload, FiSearch, FiZap } from "react-icons/fi";
+import { FiRefreshCw, FiSearch, FiZap } from "react-icons/fi";
 import { JobList } from "../components/common/DataViews";
 import { ui } from "../styles/ui";
+
+function formatSyncTime(date) {
+  if (!date) return null;
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 15) return "Synced just now";
+  if (seconds < 60) return `Synced ${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `Synced ${minutes}m ago`;
+  return `Synced ${Math.floor(minutes / 60)}h ago`;
+}
 
 export default function JobsPage({
   cvs,
@@ -9,6 +19,7 @@ export default function JobsPage({
   filterJobs,
   isBusy,
   jobs,
+  jobsSyncedAt,
   loadRecommendations,
   selectedCv,
   selectedCvId,
@@ -16,6 +27,8 @@ export default function JobsPage({
   setSelectedCvId,
   trackApplication,
 }) {
+  const syncLabel = formatSyncTime(jobsSyncedAt);
+
   return (
     <div className={ui.pageGrid}>
 
@@ -32,11 +45,16 @@ export default function JobsPage({
                 </span>
               )}
             </h2>
+            {syncLabel && (
+              <p className="mt-0.5 text-[11px] text-[#A4A4AC]" style={{ fontFamily: "var(--font-mono)" }}>
+                {syncLabel} · {jobs.length} jobs
+              </p>
+            )}
           </div>
           <div className={ui.buttonRow}>
-            <button type="button" className={ui.buttonSecondary} disabled={isBusy} onClick={fetchJobs}>
-              <FiDownload size={14} strokeWidth={1.5} />
-              Import jobs
+            <button type="button" className={ui.buttonGhost} disabled={isBusy} onClick={fetchJobs} title="Sync jobs from Adzuna">
+              <FiRefreshCw size={13} strokeWidth={1.5} />
+              Sync
             </button>
             <button type="button" className={ui.buttonCobalt} disabled={isBusy} onClick={loadRecommendations}>
               <FiZap size={14} strokeWidth={1.5} />

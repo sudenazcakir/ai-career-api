@@ -115,3 +115,26 @@ img, canvas { max-width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   .route-transition { animation: none; }
 }
+
+/* ── Loading bar ───────────────────────────────────────────────────────── */
+.lat-loading-bar-track {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  z-index: 9999;
+  background: var(--c-hairline);
+  overflow: hidden;
+}
+.lat-loading-bar-fill {
+  height: 100%;
+  width: 45%;
+  background: var(--c-cobalt);
+  animation: lat-loading-slide 1.2s var(--ease-std) infinite;
+}
+@keyframes lat-loading-slide {
+  0%   { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lat-loading-bar-fill { animation: none; width: 100%; opacity: 0.6; }
+}

@@ -16,6 +16,11 @@ export default function AuthPage({
   status,
 }) {
   const isRegister = authMode === "register";
+  const nameFormatError = isRegister
+    ? [authErrors.firstName, authErrors.lastName].find((message) =>
+        String(message || "").startsWith("Use letters")
+      )
+    : "";
   const hasInlineError = [
     "firstName",
     "lastName",
@@ -23,8 +28,12 @@ export default function AuthPage({
     "phone",
     "password",
     "confirmPassword",
-  ].some((field) => authErrors[field]);
-  const visibleStatus = status && status !== "System ready" && !hasInlineError;
+  ].some((field) => {
+    const message = authErrors[field];
+    if (!message) return false;
+    return !["firstName", "lastName"].includes(field) || message !== nameFormatError;
+  });
+  const visibleStatus = status && status !== "System ready" && !hasInlineError && !nameFormatError;
 
   return (
     <main className="flex min-h-screen min-w-0 overflow-hidden" style={{ background: "var(--c-bone)" }}>
@@ -181,7 +190,7 @@ export default function AuthPage({
                     value={authForm.firstName}
                     onChange={(e) => setAuthForm({ ...authForm, firstName: e.target.value })}
                   />
-                  <FieldError message={authErrors.firstName} />
+                  <FieldError message={authErrors.firstName === nameFormatError ? "" : authErrors.firstName} />
                 </label>
                 <label className={ui.label}>
                   Last name
@@ -191,7 +200,7 @@ export default function AuthPage({
                     value={authForm.lastName}
                     onChange={(e) => setAuthForm({ ...authForm, lastName: e.target.value })}
                   />
-                  <FieldError message={authErrors.lastName} />
+                  <FieldError message={authErrors.lastName === nameFormatError ? "" : authErrors.lastName} />
                 </label>
               </div>
             )}
@@ -257,6 +266,13 @@ export default function AuthPage({
             >
               {isBusy ? "Please wait…" : isRegister ? "Create account" : "Sign in" /* eslint-disable-line no-nested-ternary */}
             </button>
+
+            {nameFormatError && (
+              <p className="flex min-w-0 items-start gap-2 break-words rounded-[8px] border border-[#F0C5BE] bg-[#FBEDEA] px-3 py-2 text-[12px] font-medium text-[#A6261A]">
+                <FiAlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>{nameFormatError}</span>
+              </p>
+            )}
           </form>
 
           {visibleStatus && (

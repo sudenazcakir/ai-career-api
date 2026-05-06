@@ -62,9 +62,20 @@ export function validateAuthForm(form, mode) {
     if (passwordError) errors.password = passwordError;
   }
 
+  const NAME_PATTERN = /^[A-Za-z][A-Za-z\s'-]*$/;
+
   if (mode === "register") {
-    if (!form.firstName.trim()) errors.firstName = "First name is required.";
-    if (!form.lastName.trim()) errors.lastName = "Last name is required.";
+    if (!form.firstName.trim()) {
+      errors.firstName = "First name is required.";
+    } else if (!NAME_PATTERN.test(form.firstName.trim())) {
+      errors.firstName = "Use letters, spaces, hyphens, or apostrophes only.";
+    }
+
+    if (!form.lastName.trim()) {
+      errors.lastName = "Last name is required.";
+    } else if (!NAME_PATTERN.test(form.lastName.trim())) {
+      errors.lastName = "Use letters, spaces, hyphens, or apostrophes only.";
+    }
 
     const phoneError = validatePhoneNumber(normalizePhoneNumber(form.phoneNumber));
     if (phoneError) errors.phone = phoneError;

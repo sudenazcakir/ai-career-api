@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiBarChart2, FiBriefcase, FiColumns, FiFileText,
   FiLayout, FiMap, FiTarget, FiUser, FiZap,
@@ -148,6 +148,13 @@ export default function App() {
   const [trendAnalytics, setTrendAnalytics] = useState(null);
   const [applications, setApplications] = useState([]);
   const [pendingAction, setPendingAction] = useState("");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [jobsSyncedAt, setJobsSyncedAt] = useState(null);
+  const [showLoadingBar, setShowLoadingBar] = useState(false);
+
+  const loadingBarTimerRef = useRef(null);
+  const jobsAutoSyncDoneRef = useRef(false);
+
   const applicationStatuses = ["Saved for Later", "Under Review", "Accepted", "Rejected"];
 
   const selectedCv = useMemo(
@@ -157,6 +164,16 @@ export default function App() {
   const bestJobId = jobs[0]?._id || recommendations[0]?._id;
   const topScore = recommendations[0]?.matchScore ?? jobs[0]?.matchScore ?? 0;
   const isBusy = Boolean(pendingAction);
+
+  const statusType = useMemo(() => {
+    if (pendingAction) return "loading";
+    if (!status || status === "System ready") return "idle";
+    const lower = status.toLowerCase();
+    const errorWords = ["error", "failed", "invalid", "not found", "expired", "couldn't", "cannot", "rejected", "could not", "database is not"];
+    if (errorWords.some((w) => lower.includes(w))) return "error";
+    return "success";
+  }, [status, pendingAction]);
+
   const activePage =
     pages.find((page) => page.path === location.pathname) || pages[0];
   const pageTitle = isProtectedPath(location.pathname) || location.pathname === "/"
@@ -397,6 +414,68 @@ export default function App() {
     });
   }, [location.pathname, location.search, navigate]);
 
+  // Show a loading bar after 2s for any long-running action
+  useEffect(() => {
+    if (pendingAction) {
+      loadingBarTimerRef.current = setTimeout(() => setShowLoadingBar(true), 2000);
+    } else {
+      clearTimeout(loadingBarTimerRef.current);
+      setShowLoadingBar(false);
+    }
+    return () => clearTimeout(loadingBarTimerRef.current);
+  }, [pendingAction]);
+
+  // Close mobile sidebar on navigation
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [location.pathname]);
+
+  // Auto-load analytics on first visit to /trends or /insights
+  useEffect(() => {
+    if (!user || (skillAnalytics && trendAnalytics)) return;
+    if (location.pathname !== "/trends" && location.pathname !== "/insights") return;
+
+    Promise.all([getSkillAnalytics(), getTrendAnalytics()])
+      .then(([skills, trends]) => {
+        setSkillAnalytics(skills);
+        setTrendAnalytics(trends);
+      })
+      .catch((e) => {
+        if (e?.status !== 401) setStatus(`Could not load analytics: ${e.message}`);
+      });
+  }, [location.pathname, user, skillAnalytics, trendAnalytics]);
+
+  // Auto-sync jobs on first visit to /jobs
+  useEffect(() => {
+    if (!user || location.pathname !== "/jobs" || jobsAutoSyncDoneRef.current) return;
+    jobsAutoSyncDoneRef.current = true;
+
+    const params = new URLSearchParams({ sort: "newest" });
+
+    filterJobsByQuery(params)
+      .then((data) => {
+        const dbJobs = data.data || [];
+        if (dbJobs.length > 0) {
+          setJobs(dbJobs);
+          setJobsSyncedAt(new Date());
+          setStatus(`${dbJobs.length} jobs loaded`);
+        } else {
+          setStatus("Fetching jobs…");
+          return fetchJobsFromAdzuna().then((importData) =>
+            filterJobsByQuery(params).then((filtered) => {
+              setJobs(filtered.data || []);
+              setJobsSyncedAt(new Date());
+              setStatus(`${filtered.data?.length || 0} jobs loaded`);
+              return importData;
+            })
+          );
+        }
+      })
+      .catch((e) => {
+        if (e?.status !== 401) setStatus(`Could not load jobs: ${e.message}`);
+      });
+  }, [location.pathname, user]);
+
   async function runAction(label, action) {
     try {
       setPendingAction(label);
@@ -470,6 +549,7 @@ export default function App() {
       const params = new URLSearchParams({ sort: "newest" });
       const loadedJobs = await filterJobsByQuery(params);
       setJobs(loadedJobs.data || []);
+      setJobsSyncedAt(new Date());
       setStatus(
         `Jobs imported: ${data.imported || 0} new, ${data.updated || 0} updated. ${loadedJobs.data?.length || 0} jobs loaded.`
       );
@@ -684,7 +764,24 @@ export default function App() {
 
   return (
     <div className={ui.shell}>
-      <aside className={ui.sidebar}>
+
+      {/* Loading bar — appears after 2 s of any pending action */}
+      {showLoadingBar && (
+        <div aria-hidden="true" className="lat-loading-bar-track">
+          <div className="lat-loading-bar-fill" />
+        </div>
+      )}
+
+      {/* Mobile sidebar overlay */}
+      {mobileSidebarOpen && (
+        <div
+          aria-hidden="true"
+          className={ui.sidebarOverlay}
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      <aside className={`${ui.sidebar} ${mobileSidebarOpen ? ui.sidebarOpen : ""}`}>
         {/* Brand */}
         <div className={ui.brand}>
           {/* Lattice 2×2 grid mark */}
@@ -697,6 +794,15 @@ export default function App() {
           <strong style={{ fontFamily: "var(--font-sans)", fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--c-ink)" }}>
             Lattice
           </strong>
+          <button
+            aria-label="Close navigation"
+            className={ui.sidebarClose}
+            onClick={() => setMobileSidebarOpen(false)}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </button>
         </div>
 
         {/* Nav */}
@@ -762,13 +868,34 @@ export default function App() {
 
       <main className={ui.workspace}>
         <header className={ui.header}>
-          <div>
-            <p className={ui.eyebrow}>AI Career OS</p>
-            <h1 className={ui.pageTitle}>{pageTitle}</h1>
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              aria-label="Open navigation"
+              className={ui.hamburger}
+              onClick={() => setMobileSidebarOpen(true)}
+            >
+              <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
+                <path d="M0 1h16M0 6h16M0 11h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+            <div className="min-w-0">
+              <p className={ui.eyebrow}>AI Career OS</p>
+              <h1 className={ui.pageTitle}>{pageTitle}</h1>
+            </div>
           </div>
           <div className={ui.headerActions}>
-            <div className={ui.pulse}>
-              <span className={ui.pulseDot} />
+            <div className={`${ui.pulse} ${
+              statusType === "error"   ? "border-[var(--c-danger-50)] bg-[var(--c-danger-50)] text-[var(--c-danger)]" :
+              statusType === "success" ? "border-[var(--c-success-50)] bg-[var(--c-success-50)] text-[var(--c-success)]" :
+              statusType === "loading" ? "border-[var(--c-warning-50)] bg-[var(--c-warning-50)] text-[var(--c-warning)]" :
+              ""
+            }`}>
+              <span className={`${ui.pulseDot} ${
+                statusType === "error"   ? "bg-[var(--c-danger)] animate-pulse" :
+                statusType === "success" ? "bg-[var(--c-success)]" :
+                statusType === "loading" ? "bg-[var(--c-warning)] animate-pulse" :
+                "bg-[#A4A4AC]"
+              }`} />
               <span className="min-w-0 truncate">{status}</span>
             </div>
             <button
@@ -806,13 +933,19 @@ export default function App() {
               path="/cvs"
               element={
                 <CvPage
-                  cvs={cvs}
+                  compareCvId={compareCvId}
+                  compareSelectedCvs={compareSelectedCvs}
+                  createCv={createCv}
+                  createSelectedCvVersion={createSelectedCvVersion}
+                  cvComparison={cvComparison}
                   cvForm={cvForm}
+                  cvs={cvs}
+                  isBusy={isBusy}
+                  selectedCv={selectedCv}
                   selectedCvId={selectedCvId}
+                  setCompareCvId={setCompareCvId}
                   setCvForm={setCvForm}
                   setSelectedCvId={setSelectedCvId}
-                  createCv={createCv}
-                  isBusy={isBusy}
                 />
               }
             />
@@ -827,6 +960,7 @@ export default function App() {
                   selectedCvId={selectedCvId}
                   setSelectedCvId={setSelectedCvId}
                   jobs={jobs}
+                  jobsSyncedAt={jobsSyncedAt}
                   fetchJobs={fetchJobs}
                   filterJobs={filterJobs}
                   loadRecommendations={loadRecommendations}

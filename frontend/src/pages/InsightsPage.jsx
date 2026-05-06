@@ -1,4 +1,4 @@
-import { FiAward, FiBarChart2, FiMap, FiSearch, FiTrendingUp, FiZap } from "react-icons/fi";
+import { FiAward, FiMap, FiSearch, FiTrendingUp } from "react-icons/fi";
 import { Empty, ScoreBadge } from "../components/common/DataViews";
 import {
   AnalyticsBar,
@@ -69,11 +69,7 @@ export default function InsightsPage({
           </button>
         </form>
 
-        <div className="mt-3 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2 border-t border-[#E8E3D7] pt-3 max-md:grid-cols-1">
-          <button type="button" className={`${ui.buttonSecondary} w-full justify-center`} disabled={isBusy} onClick={loadAnalytics}>
-            <FiBarChart2 size={14} strokeWidth={1.5} />
-            Load analytics
-          </button>
+        <div className="mt-3 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2 border-t border-[#E8E3D7] pt-3 max-md:grid-cols-1">
           <button type="button" className={`${ui.buttonSecondary} w-full justify-center`} disabled={isBusy} onClick={findBestCv}>
             <FiAward size={14} strokeWidth={1.5} />
             Best CV for top job
