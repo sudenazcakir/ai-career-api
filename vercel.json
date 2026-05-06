@@ -14,10 +14,5 @@
     { "src": "/api/(.*)", "dest": "backend/server.js" },
     { "src": "/api-docs(.*)", "dest": "backend/server.js" },
     { "src": "/(.*)", "dest": "backend/server.js" }
-  ],
-  "functions": {
-    "backend/server.js": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
