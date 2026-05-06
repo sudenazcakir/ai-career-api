@@ -75,14 +75,25 @@ app.use("/api", careerMatrixRoutes);
 app.use("/api", applicationRoutes);
 app.use("/api", certificateRoutes);
 
-// Server
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Backend: http://localhost:${PORT}`);
-  console.log(`Frontend: http://localhost:${FRONTEND_PORT}`);
-  console.log(`Swagger: http://localhost:${PORT}/api-docs`);
+// SPA catch-all — serves React app for all non-API routes (production)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"), (err) => {
+    if (err) res.status(404).send("Not found");
+  });
 });
 
-server.on("error", (error) => {
-  console.error("Server error:", error.message);
-});
+// Only start the HTTP server when run directly (not in Vercel serverless)
+if (require.main === module) {
+  const server = app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Backend: http://localhost:${PORT}`);
+    console.log(`Frontend: http://localhost:${FRONTEND_PORT}`);
+    console.log(`Swagger: http://localhost:${PORT}/api-docs`);
+  });
+
+  server.on("error", (error) => {
+    console.error("Server error:", error.message);
+  });
+}
+
+module.exports = app;

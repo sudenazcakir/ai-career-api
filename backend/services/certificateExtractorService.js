@@ -1,4 +1,11 @@
-const pdfParse = require("pdf-parse");
+/* pdf-parse may export the function directly or wrap it — handle both */
+let pdfParse = null;
+try {
+  const mod = require("pdf-parse");
+  pdfParse = typeof mod === "function" ? mod : (mod?.default ?? null);
+} catch {
+  /* pdf-parse unavailable — extractFromPdf will degrade gracefully */
+}
 
 const KNOWN_ISSUERS = [
   "google", "amazon", "microsoft", "aws", "azure", "coursera", "udemy",
@@ -157,6 +164,13 @@ async function enhanceWithAI(text, fallback, apiKey) {
 /* ── Public extraction functions ────────────────────────────────────────── */
 
 async function extractFromPdf(buffer) {
+  if (typeof pdfParse !== "function") {
+    return {
+      title: null, issuer: null, issueDate: null,
+      credentialId: null, skills: [], url: null, confidence: 0,
+      message: "PDF text extraction is unavailable. Please fill in the certificate details manually.",
+    };
+  }
   const { text } = await pdfParse(buffer);
 
   const fallback = {
