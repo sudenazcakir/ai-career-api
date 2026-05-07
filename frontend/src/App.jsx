@@ -30,7 +30,7 @@ import PassportOnboarding from "./pages/PassportOnboarding";
 import RoadmapPage from "./pages/RoadmapPage";
 import SkillGapPage, { buildSkillGaps } from "./pages/SkillGapPage";
 import { ToastList } from "./components/common/Toast";
-import { getBackendOrigin, setUnauthorizedHandler } from "./services/api";
+import { setUnauthorizedHandler } from "./services/api";
 import {
   getCurrentUser,
   loginUser,
@@ -151,7 +151,6 @@ export default function App() {
   const [jobs, setJobs] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [matchResult, setMatchResult] = useState(null);
-  const [analysisResult, setAnalysisResult] = useState(null);
   const [roadmapIntent, setRoadmapIntent] = useState(null);
   const [bestCvResult, setBestCvResult] = useState(null);
   const [successScore, setSuccessScore] = useState(null);
@@ -821,18 +820,13 @@ export default function App() {
 
     if (!missingSkills.length) {
       setStatus("No skill gaps found for this CV");
-      setAnalysisResult(null);
       return;
     }
 
     runAction("Building learning roadmap", async () => {
-      const data = await buildRoadmap({
-        missingSkills,
-      });
-
+      await buildRoadmap({ missingSkills });
       const visibleMilestones = Math.min(missingSkills.length, 4);
       const visibleTasks = visibleMilestones * 4;
-      setAnalysisResult(data);
       setStatus(`Roadmap ready: ${visibleMilestones} skills, ${visibleTasks} tasks`);
     });
   }
@@ -1007,7 +1001,7 @@ export default function App() {
                         {isActive && (
                           <span style={{
                             position: "absolute", left: -14, top: 6, bottom: 6,
-                            width: 2, background: "var(--c-cobalt)", borderRadius: 1,
+                            width: 2, background: "var(--c-ink)", borderRadius: 1,
                           }} />
                         )}
                         {Icon && (
@@ -1029,7 +1023,7 @@ export default function App() {
 
         <a
           className={ui.docLink}
-          href={`${getBackendOrigin()}/api-docs`}
+          href="/api-docs"
           target="_blank"
           rel="noreferrer"
         >
@@ -1161,7 +1155,6 @@ export default function App() {
                   recommendations={recommendations}
                   selectedCv={selectedCv}
                   analyzeGaps={analyzeGaps}
-                  analysisResult={analysisResult}
                   matchResult={matchResult}
                   onRoadmapIntentConsumed={() => setRoadmapIntent(null)}
                   roadmapIntent={roadmapIntent}

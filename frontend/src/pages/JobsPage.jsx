@@ -714,17 +714,22 @@ function MatchExplanation({ job }) {
 
 function ScoreRing({ value = 0 }) {
   const score = Math.max(0, Math.min(Number(value) || 0, 100));
+  const fillColor = score >= 75 ? "#D7E25C" : score >= 50 ? "#1E3FFF" : "#A4A4AC";
+  const textColor = score >= 75 ? "#0E0E10" : score >= 50 ? "#1E3FFF" : "#6B6B72";
 
   return (
     <div
       className="grid aspect-square place-items-center rounded-full p-[10px]"
       style={{
-        background: `conic-gradient(#C45C35 ${score}%, #E8E3D7 0)`,
+        background: `conic-gradient(${fillColor} ${score}%, #E8E3D7 0)`,
       }}
       aria-label={`Match score ${score}%`}
     >
       <div className="grid h-full w-full place-items-center rounded-full bg-[#FBFAF6]">
-        <strong className="text-[26px] font-semibold tracking-[-0.02em] text-[#C45C35]">
+        <strong
+          className="text-[26px] font-semibold tracking-[-0.02em]"
+          style={{ color: textColor }}
+        >
           {score}%
         </strong>
       </div>

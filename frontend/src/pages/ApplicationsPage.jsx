@@ -1,6 +1,6 @@
 import { FiBriefcase, FiSearch } from "react-icons/fi";
 import { Empty, JobList } from "../components/common/DataViews";
-import { ui } from "../styles/ui";
+import { getStatusClass, ui } from "../styles/ui";
 
 function formatDate(dateString) {
   if (!dateString) return null;
@@ -13,14 +13,6 @@ function formatDate(dateString) {
   if (diffDays < 7) return `${diffDays}d ago`;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
-
-/* Pill style per status — matches lat-status-pill from design system */
-const STATUS_PILL = {
-  "Saved for Later": { bg: "#F6F3EC", color: "#3A3A40", border: "1px solid #E8E3D7" },
-  "Under Review":    { bg: "#E6EBFF", color: "#1E3FFF", border: "none" },
-  "Accepted":        { bg: "#E5F4EC", color: "#0E7C4A", border: "none" },
-  "Rejected":        { bg: "#EFE5F8", color: "#5B2A86", border: "none" },
-};
 
 export default function ApplicationsPage({
   applications,
@@ -92,33 +84,20 @@ export default function ApplicationsPage({
         </section>
       ) : (
         <section className="grid grid-cols-4 gap-3.5 max-xl:grid-cols-2 max-sm:grid-cols-1">
-          {columns.map((column) => {
-            const meta = STATUS_PILL[column.status] || STATUS_PILL["Saved for Later"];
-            return (
-              <div
-                key={column.status}
-                className="flex min-h-[320px] flex-col overflow-hidden rounded-[12px] border border-[#E8E3D7] bg-[#FBFAF6]"
-              >
-                {/* Column header — StatusPill badge + count */}
-                <div className="flex items-center justify-between border-b border-[#E8E3D7] px-3 py-2.5">
-                  <span
-                    className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium"
-                    style={{
-                      background: meta.bg,
-                      color: meta.color,
-                      border: meta.border,
-                      fontFamily: "var(--font-sans)",
-                    }}
-                  >
-                    {column.status}
-                  </span>
-                  <span
-                    className="text-[11px] font-medium text-[#6B6B72]"
-                    style={{ fontFamily: "var(--font-mono)" }}
-                  >
-                    {column.items.length}
-                  </span>
-                </div>
+          {columns.map((column) => (
+            <div
+              key={column.status}
+              className="flex min-h-[320px] flex-col overflow-hidden rounded-[12px] border border-[#E8E3D7] bg-[#FBFAF6]"
+            >
+              {/* Column header — StatusPill badge + count */}
+              <div className="flex items-center justify-between border-b border-[#E8E3D7] px-3 py-2.5">
+                <span className={getStatusClass(column.status)}>
+                  {column.status}
+                </span>
+                <span className={ui.count}>
+                  {column.items.length}
+                </span>
+              </div>
 
                 {/* Column body */}
                 <div className="flex flex-1 flex-col gap-2.5 p-3">
@@ -138,8 +117,7 @@ export default function ApplicationsPage({
                   )}
                 </div>
               </div>
-            );
-          })}
+          ))}
         </section>
       )}
 

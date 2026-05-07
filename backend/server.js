@@ -15,7 +15,18 @@ const FRONTEND_PORT = 5173;
 
 connectDB();
 
-app.use(cors());
+const ALLOWED_ORIGINS = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim())
+  : ["http://localhost:5173", "http://localhost:5001"];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow server-to-server requests (no Origin header) and known origins
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} is not allowed`));
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: "5mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -66,13 +77,10 @@ app.get("/api/health", (req, res) => {
   res.json({ success: true, message: "API is running", db: getDbStatus() });
 });
 
-app.use("/api", async (req, res, next) => {
-  const connection = await connectDB();
-
-  if (!connection || connection.readyState !== 1) {
+app.use("/api", (req, res, next) => {
+  if (getDbStatus().readyState !== 1) {
     return res.status(503).json({ error: "Database is not connected" });
   }
-
   next();
 });
 

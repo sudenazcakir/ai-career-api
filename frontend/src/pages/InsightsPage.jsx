@@ -205,7 +205,7 @@ export default function InsightsPage({
               <span className="text-[13px] text-[#3A3A40]">{successScore.summary}</span>
             </div>
 
-            <div className="grid grid-cols-4 gap-0 overflow-hidden rounded-[12px] border border-[#E8E3D7] max-lg:grid-cols-2">
+            <div className={ui.metrics}>
               {[
                 { label: "Success score",        value: `${successScore.successScore}%` },
                 { label: "Match score",           value: `${successScore.matchScore}%` },

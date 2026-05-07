@@ -505,6 +505,13 @@ async function upsertApplication(seed, userMap, cvMap, jobMap) {
 
 async function main() {
   const mongoUri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/ai-career-api";
+
+  if (process.env.NODE_ENV === "production") {
+    console.error("ERROR: Seed scripts must not run with NODE_ENV=production.");
+    process.exitCode = 1;
+    return;
+  }
+
   await mongoose.connect(mongoUri);
 
   const resetMode = process.argv.includes("--reset");

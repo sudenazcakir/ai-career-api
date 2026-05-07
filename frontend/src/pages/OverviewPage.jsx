@@ -1,13 +1,6 @@
 import { FiArrowRight, FiDownload, FiZap } from "react-icons/fi";
 import { Empty, Metric, ProfileSummary } from "../components/common/DataViews";
-import { ui } from "../styles/ui";
-
-function getDashboardScoreClass(value = 0) {
-  const base = "inline-flex min-w-[52px] items-center justify-center rounded-[4px] px-2.5 py-1 text-[13px] font-[600]";
-  if (value >= 75) return `${base} bg-[#D7E25C] text-[#0E0E10]`;
-  if (value >= 50) return `${base} bg-[#E6EBFF] text-[#1E3FFF]`;
-  return `${base} bg-[#EFE5F8] text-[#5B2A86]`;
-}
+import { getScoreClass, ui } from "../styles/ui";
 
 /* Mini match-bar row used in the featured top-recommendation card */
 function MatchBars({ breakdown, matchScore = 0 }) {
@@ -155,7 +148,7 @@ export default function OverviewPage({
               </div>
 
               {/* Score pill */}
-              <strong className={getDashboardScoreClass(topRec.matchScore ?? 0)}>
+              <strong className={getScoreClass(topRec.matchScore ?? 0)}>
                 {topRec.matchScore ?? 0}%
               </strong>
             </div>
@@ -176,7 +169,7 @@ export default function OverviewPage({
                           <span className="ml-1.5 text-[12px] text-[#6B6B72]">· {job.company}</span>
                         )}
                       </div>
-                      <strong className={getDashboardScoreClass(job.matchScore ?? 0)}>
+                      <strong className={getScoreClass(job.matchScore ?? 0)}>
                         {job.matchScore ?? 0}%
                       </strong>
                     </div>

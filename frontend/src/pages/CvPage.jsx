@@ -135,7 +135,7 @@ export default function CvPage({
         </div>
 
         <form
-          className="grid min-h-0 flex-1 gap-3.5"
+          className="grid min-h-0 flex-1 gap-3.5 max-lg:flex max-lg:flex-col"
           style={{ gridTemplateRows: "auto minmax(230px, 1.25fr) minmax(210px, 0.95fr) auto" }}
           onSubmit={saveCv}
         >
@@ -176,7 +176,7 @@ export default function CvPage({
           <label className="flex min-h-0 flex-col gap-1.5 text-[10px] font-[500] uppercase tracking-[0.05em] text-[#6B6B72] font-mono">
             Summary
             <textarea
-              className={`${ui.input} !h-full min-h-0 resize-none py-2 leading-relaxed`}
+              className={`${ui.input} !h-full min-h-22.5 resize-none py-2 leading-relaxed`}
               rows={3}
               value={cvForm.summary}
               onChange={(event) => setCvForm({ ...cvForm, summary: event.target.value })}
@@ -195,7 +195,7 @@ export default function CvPage({
               >
                 {label}
                 <textarea
-                  className={`${ui.input} !h-full min-h-0 resize-none py-2 leading-relaxed`}
+                  className={`${ui.input} !h-full min-h-20 resize-none py-2 leading-relaxed`}
                   rows={3}
                   value={cvForm[field]}
                   onChange={(event) =>
@@ -635,68 +635,6 @@ function PreviewStat({ label, value }) {
       <span className={ui.metricLabel}>{label}</span>
       <strong className="text-[18px] font-semibold text-[#0E0E10]">{value}</strong>
     </div>
-  );
-}
-
-function CvPreview({ cv }) {
-  const hasContent =
-    (cv.projects?.length || 0) +
-    (cv.experience?.length || 0) +
-    (cv.education?.length || 0) +
-    (cv.certifications?.length || 0) > 0;
-
-  return (
-    <>
-      <div className={ui.sectionHead}>
-        <div>
-          <p className={ui.eyebrow}>CV Preview</p>
-          <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
-            {cv.title}
-          </h2>
-          <p className="mt-0.5 text-[12px] text-[#6B6B72]">
-            {cv.type || "General"} · {cv.version || "v1"}
-          </p>
-        </div>
-      </div>
-
-      {cv.summary && (
-        <p className="mb-4 text-[13px] leading-relaxed text-[#3A3A40]">{cv.summary}</p>
-      )}
-
-      {(cv.skills || []).length > 0 && (
-        <div className="mb-4">
-          <p className={ui.miniLabel}>Skills</p>
-          <div className={ui.chips}>
-            {cv.skills.map((skill) => (
-              <span className={ui.chip} key={skill}>
-                {skill}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {hasContent && (
-        <div className={ui.pageGrid}>
-          {(cv.projects || []).length > 0 && (
-            <PreviewList title="Projects" items={cv.projects} />
-          )}
-          {(cv.experience || []).length > 0 && (
-            <PreviewList title="Experience" items={cv.experience} />
-          )}
-          {(cv.education || []).length > 0 && (
-            <PreviewList title="Education" items={cv.education} />
-          )}
-          {(cv.certifications || []).length > 0 && (
-            <PreviewList title="Certifications" items={cv.certifications} />
-          )}
-        </div>
-      )}
-
-      {!cv.summary && (cv.skills || []).length === 0 && !hasContent && (
-        <p className={ui.muted}>No content yet. Edit this CV to add details.</p>
-      )}
-    </>
   );
 }
 

@@ -434,7 +434,7 @@ export default function RoadmapPage({
                 Choose what this roadmap should focus on
               </h2>
               <p className="mt-1 max-w-[720px] text-[13px] leading-relaxed text-[#6B6B72]">
-                {roadmapIntent?.label || "These are your most frequent missing skills from Skill Map. Select up to 4 skills for a focused growth plan. WARNING: If you unselect a skill when the roadmap is generated, your roadmap will be resetted."}
+                {roadmapIntent?.label || "These are your most frequent missing skills from Skill Map. Select up to 4 skills for a focused growth plan. Changing your selection while a roadmap is active will reset the current plan."}
               </p>
             </div>
             <span className={ui.count}>{selectedSkillNames.length}/4 selected</span>

@@ -64,7 +64,7 @@ export default function AnalyticsPage({
               : "Analytics load automatically on page visit. Refresh to reload."}
           </p>
           <div className="mt-5">
-            <button className={ui.buttonGhost} type="button" onClick={loadAnalytics}>
+            <button className={ui.buttonCobalt} type="button" onClick={loadAnalytics}>
               <FiRefreshCw size={13} strokeWidth={1.5} />
               Refresh analytics
             </button>

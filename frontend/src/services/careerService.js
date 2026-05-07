@@ -33,19 +33,8 @@ export function filterJobsByQuery(params) {
   return apiRequest(`/api/jobs/filter?${params.toString()}`);
 }
 
-export function getRecommendations(cvId) {
-  return apiRequest(`/api/recommendations?cvId=${cvId}`);
-}
-
 export function getBestCv(jobId) {
   return apiRequest(`/api/best-cv/${jobId}`);
-}
-
-export function calculateMatch(payload) {
-  return apiRequest("/api/match", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
 }
 
 export function calculateFullMatch({ cvId, jobId }) {
