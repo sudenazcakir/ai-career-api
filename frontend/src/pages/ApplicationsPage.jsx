@@ -1,4 +1,4 @@
-import { FiBriefcase, FiSearch } from "react-icons/fi";
+import { FiBriefcase, FiSearch, FiX } from "react-icons/fi";
 import { Empty, JobList } from "../components/common/DataViews";
 import { getStatusClass, ui } from "../styles/ui";
 
@@ -17,6 +17,7 @@ function formatDate(dateString) {
 export default function ApplicationsPage({
   applications,
   applicationStatuses = ["Saved for Later", "Under Review", "Accepted", "Rejected"],
+  deleteApplication,
   setActivePage,
   updateApplicationStatus,
   similarApplications = [],
@@ -89,7 +90,7 @@ export default function ApplicationsPage({
               key={column.status}
               className="flex min-h-[320px] flex-col overflow-hidden rounded-[12px] border border-[#E8E3D7] bg-[#FBFAF6]"
             >
-              {/* Column header — StatusPill badge + count */}
+              {/* Column header */}
               <div className="flex items-center justify-between border-b border-[#E8E3D7] px-3 py-2.5">
                 <span className={getStatusClass(column.status)}>
                   {column.status}
@@ -99,24 +100,28 @@ export default function ApplicationsPage({
                 </span>
               </div>
 
-                {/* Column body */}
-                <div className="flex flex-1 flex-col gap-2.5 p-3">
-                  {column.items.length === 0 ? (
-                    <p className="pt-4 text-center text-[12px] text-[#A4A4AC]">
-                      No applications in this stage.
-                    </p>
-                  ) : (
-                    column.items.map((application) => (
-                      <ApplicationCard
-                        key={application._id}
-                        application={application}
-                        applicationStatuses={applicationStatuses}
-                        updateApplicationStatus={updateApplicationStatus}
-                      />
-                    ))
-                  )}
-                </div>
+              {/* Column body — scrollable, max 3 cards visible */}
+              <div
+                className="flex flex-col gap-2.5 overflow-y-auto p-3"
+                style={{ maxHeight: 460 }}
+              >
+                {column.items.length === 0 ? (
+                  <p className="pt-4 text-center text-[12px] text-[#A4A4AC]">
+                    No applications in this stage.
+                  </p>
+                ) : (
+                  column.items.map((application) => (
+                    <ApplicationCard
+                      key={application._id}
+                      application={application}
+                      applicationStatuses={applicationStatuses}
+                      updateApplicationStatus={updateApplicationStatus}
+                      deleteApplication={deleteApplication}
+                    />
+                  ))
+                )}
               </div>
+            </div>
           ))}
         </section>
       )}
@@ -153,12 +158,22 @@ export default function ApplicationsPage({
   );
 }
 
-function ApplicationCard({ application, applicationStatuses, updateApplicationStatus }) {
+function ApplicationCard({ application, applicationStatuses, updateApplicationStatus, deleteApplication }) {
   const skills = (application.job?.skills || []).slice(0, 5);
 
   return (
-    <article className="grid gap-3 rounded-[8px] border border-[#E8E3D7] bg-[#F6F3EC] p-3">
-      <div className="min-w-0">
+    <article className="relative grid gap-3 rounded-[8px] border border-[#E8E3D7] bg-[#F6F3EC] p-3">
+      {/* X button */}
+      <button
+        type="button"
+        aria-label="Remove application"
+        className="absolute right-2 top-2 grid h-[18px] w-[18px] place-items-center rounded text-[#A4A4AC] transition-colors hover:text-[#0E0E10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3FFF]"
+        onClick={() => deleteApplication(application._id)}
+      >
+        <FiX size={12} strokeWidth={2} />
+      </button>
+
+      <div className="min-w-0 pr-5">
         <h3 className="text-[13px] font-semibold text-[#0E0E10]">
           {application.job?.title || "Unknown role"}
         </h3>

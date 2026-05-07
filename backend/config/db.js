@@ -17,7 +17,12 @@ async function connectDB() {
     return null;
   }
 
-  connectionPromise = mongoose.connect(process.env.MONGO_URI).then(() => {
+  connectionPromise = mongoose.connect(process.env.MONGO_URI, {
+    maxPoolSize: 1,
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 20000,
+    bufferCommands: false,
+  }).then(() => {
     lastConnectionError = null;
     console.log("MongoDB connected");
     return mongoose.connection;

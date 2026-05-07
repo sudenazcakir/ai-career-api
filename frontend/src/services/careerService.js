@@ -91,6 +91,10 @@ export function updateApplicationStatus(id, status) {
   });
 }
 
+export function deleteApplication(id) {
+  return apiRequest(`/api/applications/${id}`, { method: "DELETE" });
+}
+
 export function getSimilarApplications() {
   return apiRequest("/api/applications/similar-roles");
 }

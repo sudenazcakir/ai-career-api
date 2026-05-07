@@ -51,6 +51,7 @@ import {
   getSkillAnalytics,
   getTrendAnalytics,
   deleteCv,
+  deleteApplication,
   generateCv,
   getSimilarApplications,
   listApplications,
@@ -347,6 +348,13 @@ export default function App() {
     runAction("Updating status", async () => {
       await updateApplicationStatus(id, status);
       await loadApplications();
+    });
+  }
+
+  function handleDeleteApplication(id) {
+    runAction("Removing application", async () => {
+      await deleteApplication(id);
+      setApplications((prev) => prev.filter((a) => a._id !== id));
     });
   }
 
@@ -1172,6 +1180,7 @@ export default function App() {
                 <ApplicationsPage
                   applications={applications}
                   applicationStatuses={applicationStatuses}
+                  deleteApplication={handleDeleteApplication}
                   loadSimilarApplications={loadSimilarApplications}
                   similarApplications={similarApplications}
                   updateApplicationStatus={handleUpdateApplicationStatus}

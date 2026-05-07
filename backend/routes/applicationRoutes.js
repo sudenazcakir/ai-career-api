@@ -5,15 +5,7 @@ const CV = require("../models/CV");
 const Job = require("../models/Job");
 
 const router = express.Router();
-const APPLICATION_STATUSES = ["Saved for Later", "Under Review", "Accepted", "Rejected"];
-
-function ensureDbConnected(res) {
-  if (Application.db.readyState !== 1) {
-    res.status(503).json({ error: "Database is not connected" });
-    return false;
-  }
-  return true;
-}
+const APPLICATION_STATUSES = new Set(["Saved for Later", "Under Review", "Accepted", "Rejected"]);
 
 function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id);
@@ -33,8 +25,6 @@ function isValidObjectId(id) {
  */
 router.get("/applications", async (req, res) => {
   try {
-    if (!ensureDbConnected(res)) return;
-
     const applications = await Application.find({ owner: req.user._id })
       .populate("job")
       .populate("cv")
@@ -60,8 +50,6 @@ router.get("/applications", async (req, res) => {
  */
 router.post("/applications", async (req, res) => {
   try {
-    if (!ensureDbConnected(res)) return;
-
     const { jobId, cvId, notes = "", status = "Under Review" } = req.body;
 
     if (!jobId || !cvId) {
@@ -70,7 +58,7 @@ router.post("/applications", async (req, res) => {
     if (!isValidObjectId(jobId) || !isValidObjectId(cvId)) {
       return res.status(400).json({ error: "Invalid jobId or cvId" });
     }
-    if (!APPLICATION_STATUSES.includes(status)) {
+    if (!APPLICATION_STATUSES.has(status)) {
       return res.status(400).json({ error: "Invalid application status" });
     }
 
@@ -107,18 +95,6 @@ router.post("/applications", async (req, res) => {
 
 /**
  * @swagger
- * /applications/{id}/status:
- *   patch:
- *     summary: Update application status
- *     tags: [Applications]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Updated application
- */
-/**
- * @swagger
  * /applications/similar-roles:
  *   get:
  *     summary: Get jobs similar to the user's past applications
@@ -132,8 +108,6 @@ router.post("/applications", async (req, res) => {
  */
 router.get("/applications/similar-roles", async (req, res) => {
   try {
-    if (!ensureDbConnected(res)) return;
-
     const applications = await Application.find({ owner: req.user._id }).populate("job");
 
     if (applications.length === 0) {
@@ -171,14 +145,16 @@ router.get("/applications/similar-roles", async (req, res) => {
       _id: { $nin: validExclusions },
     }).limit(60);
 
+    const topSkillsSet = new Set(topSkills);
+
     // Score by skill overlap with top skills
     const scored = candidates
       .map((job) => {
-        const jobSkillsLower = (job.skills || []).map((s) => s.toLowerCase());
-        const overlap = topSkills.filter((s) => jobSkillsLower.includes(s)).length;
+        const jobSkillsLower = new Set((job.skills || []).map((s) => s.toLowerCase()));
+        const overlap = topSkills.filter((s) => jobSkillsLower.has(s)).length;
         return {
           ...job.toObject(),
-          matchScore: Math.round((overlap / topSkills.length) * 100),
+          matchScore: Math.round((overlap / topSkillsSet.size) * 100),
         };
       })
       .filter((job) => job.matchScore > 0)
@@ -191,17 +167,27 @@ router.get("/applications/similar-roles", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /applications/{id}/status:
+ *   patch:
+ *     summary: Update application status
+ *     tags: [Applications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Updated application
+ */
 router.patch("/applications/:id/status", async (req, res) => {
   try {
-    if (!ensureDbConnected(res)) return;
-
     const { id } = req.params;
     const { status } = req.body;
 
     if (!isValidObjectId(id)) {
       return res.status(400).json({ error: "Invalid application id" });
     }
-    if (!APPLICATION_STATUSES.includes(status)) {
+    if (!APPLICATION_STATUSES.has(status)) {
       return res.status(400).json({ error: "Invalid application status" });
     }
 
@@ -218,6 +204,22 @@ router.patch("/applications/:id/status", async (req, res) => {
     }
 
     res.json({ success: true, data: application });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete("/applications/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ error: "Invalid application id" });
+    }
+    const application = await Application.findOneAndDelete({ _id: id, owner: req.user._id });
+    if (!application) {
+      return res.status(404).json({ error: "Application not found" });
+    }
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
