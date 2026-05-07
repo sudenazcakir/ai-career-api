@@ -39,6 +39,13 @@ Important local URLs:
 - Swagger UI: `http://localhost:5001/api-docs`
 - Frontend URL: `http://localhost:5173`
 
+## Live Demo
+
+- Production: <https://ai-career-api-eight.vercel.app>
+- API Docs: <https://ai-career-api-eight.vercel.app/api-docs>
+
+Deployed on Vercel (Node.js serverless + SPA static). `npm run build:prod` builds the frontend and copies the output to `backend/public/`, which Vercel bundles into the serverless function.
+
 ## Features
 
 - JWT tabanli register/login akisi
@@ -49,12 +56,16 @@ Important local URLs:
 - CV compare and best-CV flows
 - MongoDB tabanli job listesi, filtreleme ve Adzuna import/fetch akisi
 - CV context ile recommendations
-- Weighted match scoring and explainability
+- Weighted match scoring and explainability (Skill×0.60 + Experience×0.25 + Role×0.15)
 - Missing skill analysis and learning roadmap generation
+- Growth Plan with skill selection — Skill Map gap'leri → kullanici 1-4 skill secer → milestone roadmap uretilir
 - Application tracker with Saved, Under Review, Accepted and Rejected statuses
+- Similar roles recommendation based on application history
+- Certificate management — PDF/image upload, AI-powered extraction (OpenAI Vision + regex fallback)
 - Analytics / Market Signals charts with Chart.js
 - Career Matrix panel with optional OpenAI-assisted fit analysis
-- Application success score / interview predictor
+- Application success score / interview predictor with auto-recalculate on CV or job change
+- Toast notification system — bottom-right auto-dismiss toasts replace the old header status pill
 - Lattice Career design system across the frontend
 
 ## Frontend Routes
@@ -127,12 +138,12 @@ Check `.env`:
 ```env
 PORT=5001
 JWT_SECRET=replace_this_local_dev_secret
-VITE_BACKEND_ORIGIN=http://localhost:5001
 MONGO_URI=mongodb://127.0.0.1:27017/ai-career-api
 ADZUNA_APP_ID=your_adzuna_app_id
 ADZUNA_APP_KEY=your_adzuna_app_key
-OPENAI_API_KEY=your_openai_api_key
-OPENAI_MODEL=gpt-4.1-mini
+OPENAI_API_KEY=your_openai_api_key   # optional — Career Matrix + certificate AI extraction
+OPENAI_MODEL=gpt-4.1-mini            # optional — defaults to gpt-4.1-mini
+VITE_BACKEND_ORIGIN=http://localhost:5001  # omit in production (same-origin on Vercel)
 ```
 
 `.env.example` defaults to local MongoDB. For Atlas, replace only `MONGO_URI`:
@@ -141,7 +152,7 @@ OPENAI_MODEL=gpt-4.1-mini
 mongodb+srv://<username>:<password>@cluster0.example.mongodb.net/ai-career-api?retryWrites=true&w=majority
 ```
 
-OpenAI settings are optional and only needed for AI-assisted Career Matrix behavior.
+`OPENAI_API_KEY` is optional. When set it powers: AI-assisted Career Matrix, CV draft generation from passport, and certificate data extraction from uploaded PDFs/images.
 
 ## Local Development
 
@@ -190,18 +201,24 @@ npm run build
 ```powershell
 npm run check:db
 npm run seed:demo
+npm run seed:test          # full test dataset (4 users, 6 CVs, 8 jobs, 6 applications)
+npm run seed:test:reset    # wipe DB then seed
 npm run server
 npm run client
 npm run build
+npm run build:prod         # production build — used by Vercel
 ```
 
 Script mapping:
 
-- `npm run server` -> `backend/server.js`
-- `npm run client` -> Vite app using `frontend/`
-- `npm run build` -> production frontend build into `frontend/dist`
-- `npm run check:db` -> `backend/scripts/checkDb.js`
-- `npm run seed:demo` -> `backend/scripts/seedDemo.js`
+- `npm run server` → `backend/server.js`
+- `npm run client` → Vite dev server using `frontend/`
+- `npm run build` → production frontend build into `frontend/dist`
+- `npm run build:prod` → build + copy `frontend/dist` to `backend/public` (Vercel deployment)
+- `npm run check:db` → `backend/scripts/checkDb.js`
+- `npm run seed:demo` → `backend/scripts/seedDemo.js`
+- `npm run seed:test` → `backend/scripts/seedFullTestData.js`
+- `npm run test:e2e` → Playwright E2E tests
 
 ## Available API Surface
 
@@ -251,6 +268,7 @@ Application routes:
 - `GET /api/applications`
 - `POST /api/applications`
 - `PATCH /api/applications/:id/status`
+- `GET /api/applications/similar-roles`
 
 Analytics and AI-assisted routes:
 
@@ -259,15 +277,41 @@ Analytics and AI-assisted routes:
 - `GET /api/analytics/trends`
 - `POST /api/career-matrix`
 
+Certificate routes:
+
+- `POST /api/certificates/extract` — upload PDF or image, returns extracted certificate fields
+
+## Vercel Deployment
+
+1. MongoDB Atlas'ta free cluster olustur, connection string al
+2. Kodu GitHub'a push yap
+3. Vercel'de yeni proje olustur — root directory: `ai-career-api`
+4. Environment Variables ekle:
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `MONGO_URI` | Yes | MongoDB Atlas connection string |
+| `JWT_SECRET` | Yes | Secure random string (min 32 chars) |
+| `ADZUNA_APP_ID` | Yes | Adzuna API app ID |
+| `ADZUNA_APP_KEY` | Yes | Adzuna API app key |
+| `OPENAI_API_KEY` | Optional | Career Matrix + certificate AI extraction |
+| `NODE_ENV` | Yes | Set to `production` |
+
+5. Deploy — `build:prod` script otomatik calisir, frontend `backend/public/` altina kopyalanir
+
+`VITE_BACKEND_ORIGIN` Vercel'de ayarlanmaz: frontend ve backend ayni domain'de (same-origin).
+
 ## Notes
 
 - `MONGO_URI` yoksa backend acilir, ancak DB gerektiren endpointler `503` donebilir.
 - `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` only matter for Adzuna import/fetch flows.
-- Swagger backend tarafinda servis edilir: `http://localhost:5001/api-docs`.
+- Swagger backend tarafinda servis edilir: `http://localhost:5001/api-docs` (local) ve `https://ai-career-api-eight.vercel.app/api-docs` (production).
 - Sign-in/sign-up JWT tabanlidir. Frontend token'i `localStorage` icinde saklar.
 - `POST /api/auth/register`, `POST /api/auth/login` and `/api-docs` are public; the rest of `/api/*` is protected by JWT.
 - CV, application and recommendation data user-scoped olarak tutulur.
-- Frontend SPA routing uses React Router. Production static hosting needs SPA fallback support.
+- Frontend SPA routing uses React Router. Production static hosting needs SPA fallback support (vercel.json handles this with a catch-all route).
+- Certificate upload limiti 5 MB'dir (multer). Vercel Hobby plan'da request body limiti 4.5 MB olabilir.
+- Toast notification system: action feedback bottom-right kose toasts ile gosterilir (header status pill kaldirildi).
 - `frontend/DESIGN_SYSTEM.md` is the source of truth for future UI/design changes.
 
 ## Reference Documents

@@ -285,6 +285,36 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /cvs/{id}/version:
+ *   post:
+ *     summary: Create a versioned copy of a CV
+ *     tags: [CVs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Source CV ID
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               version:
+ *                 type: string
+ *                 description: Optional version label (auto-incremented if omitted)
+ *     responses:
+ *       201:
+ *         description: New versioned CV created
+ *       404:
+ *         description: Source CV not found
+ */
 router.post("/:id/version", async (req, res) => {
   try {
     if (CV.db.readyState !== 1) {
@@ -329,6 +359,32 @@ router.post("/:id/version", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /cvs/compare:
+ *   post:
+ *     summary: Compare two CVs side-by-side
+ *     tags: [CVs]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [leftCvId, rightCvId]
+ *             properties:
+ *               leftCvId:
+ *                 type: string
+ *               rightCvId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Comparison result with shared skills, unique skills per CV, and similarity score
+ *       404:
+ *         description: One or both CVs not found
+ */
 router.post("/compare", async (req, res) => {
   try {
     if (CV.db.readyState !== 1) {
@@ -404,6 +460,36 @@ router.post("/best-cv", (req, res) => {
 
 
 
+/**
+ * @swagger
+ * /cvs/generate:
+ *   post:
+ *     summary: Generate a CV draft from Career Passport data
+ *     description: Uses OpenAI (if configured) to draft a CV from the user's passport profile. Falls back to a rule-based template when no API key is set.
+ *     tags: [CVs]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [passport]
+ *             properties:
+ *               passport:
+ *                 type: object
+ *                 description: Career Passport fields (targetTitle, skills, experience, etc.)
+ *               targetField:
+ *                 type: string
+ *                 description: Target job field hint (e.g. "Backend", "Frontend")
+ *               jobId:
+ *                 type: string
+ *                 description: Optional job ID to tailor the draft toward
+ *     responses:
+ *       200:
+ *         description: Generated CV draft with title, skills, summary and sections
+ */
 router.post("/generate", async (req, res) => {
   try {
     const { generateCvDraft } = require("../services/cvGeneratorService");
@@ -418,6 +504,29 @@ router.post("/generate", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /cvs/rank-for-job:
+ *   post:
+ *     summary: Rank all user CVs for a specific job using weighted match score
+ *     tags: [CVs]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [jobId]
+ *             properties:
+ *               jobId:
+ *                 type: string
+ *                 description: The job to rank CVs against
+ *     responses:
+ *       200:
+ *         description: Array of CVs sorted by match score descending, each with matchScore, matchedSkills, missingSkills
+ */
 router.post("/rank-for-job", async (req, res) => {
   try {
     if (CV.db.readyState !== 1) {

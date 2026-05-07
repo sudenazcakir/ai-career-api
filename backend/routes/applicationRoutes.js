@@ -118,9 +118,17 @@ router.post("/applications", async (req, res) => {
  *         description: Updated application
  */
 /**
- * GET /applications/similar-roles
- * Returns jobs similar to what the user has previously applied to,
- * excluding jobs already in their application list.
+ * @swagger
+ * /applications/similar-roles:
+ *   get:
+ *     summary: Get jobs similar to the user's past applications
+ *     description: Scores all non-applied jobs by skill overlap with previously applied jobs. Rejected applications are weighted lower (0.4×).
+ *     tags: [Applications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Array of up to 6 similar jobs sorted by matchScore descending
  */
 router.get("/applications/similar-roles", async (req, res) => {
   try {

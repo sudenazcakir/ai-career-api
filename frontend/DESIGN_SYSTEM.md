@@ -508,7 +508,42 @@ Wrap the list in `<JobList items={...} />` from `DataViews.jsx` — it handles t
 - Hover: `bg-[#F6F3EC]` (Bone)
 - Section labels: Geist Mono 10px UPPERCASE Slate, `mb-1.5` below
 
-### 5.12 Modals
+### 5.12 Toast notifications
+
+Toast notifications replace the old header status pill. They appear bottom-right, auto-dismiss, and stack up to 4 at once.
+
+**Component:** `frontend/src/components/common/Toast.jsx`
+**Exports:** `Toast`, `ToastList`
+
+Usage in App.jsx:
+```jsx
+<ToastList toasts={toasts} onRemove={removeToast} />
+```
+
+| Token | Purpose |
+|---|---|
+| `ui.toastList` | Fixed bottom-right container (`z-[9999]`, `flex-col-reverse`) |
+| `ui.toastBase` | Card base — uses `.lat-toast` CSS class for entrance animation |
+| `ui.toastSuccess` | Green left border `border-l-[#0E7C4A]` |
+| `ui.toastError` | Red left border `border-l-[#A6261A]` |
+| `ui.toastInfo` | Cobalt left border `border-l-[#1E3FFF]` |
+| `ui.toastDismiss` | × dismiss button |
+| `ui.toastMessage` | Message span — Geist Mono 12px Graphite |
+
+Rules:
+- Never call `addToast` directly from page components. Use the `setStatus(msg)` shim in `App.jsx` — it auto-detects `"error"` / `"success"` / `"info"` from the message text.
+- Error toasts auto-dismiss after **5 s**; success/info after **3 s**.
+- `role="status"` and `aria-live="polite"` live on `ToastList` only — not on individual `Toast`.
+- CSS animations are in `src/styles.css` (`.lat-toast`, `.lat-toast.is-leaving`, `prefers-reduced-motion` block).
+
+**Loading pill** (pre-auth spinner, not a toast):
+
+| Token | Purpose |
+|---|---|
+| `ui.loadingPill` | Auth-check spinner container — same visual style as the old status pill |
+| `ui.loadingDot` | Pulse-animated dot inside the loading pill |
+
+### 5.13 Modals
 
 ```jsx
 <div className={ui.modalBackdrop} role="presentation">
@@ -556,10 +591,13 @@ Window: `rounded-[20px]`, Paper bg, `--shadow-lg`.
 - Versioning section spans full width below
 
 ### InsightsPage
-- Starts with full-width lab form card
-- Followed by 2-col grid: match explanation left, roadmap right
-- Success score section spans full width
-- Analytics cards in 2-col split below
+- Starts with full-width Explainability Lab card: CV dropdown + job dropdown + Run match button
+- Selecting a CV or job auto-triggers match + success score (no separate button needed)
+- 2-col grid below: match explanation left, application success score right
+- Success score uses the CV and job selected in the lab form — not the global top-ranked job
+- Best CV for selected job section spans full width
+- Analytics cards (skill frequency + market trends) in 2-col split at bottom
+- "Suggested next steps" section removed — skill guidance moved to Growth Plan
 
 ### AccountPage
 - `ui.accountHero` card at top: avatar (Ink circle, Bone initials) + name/email + Sign out

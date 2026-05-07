@@ -736,21 +736,61 @@ Use the data above in this order for a new tester:
 | Step | User/data | Page or endpoint | Expected UI | Expected API |
 |---|---|---|---|---|
 | 1 | strong-backend register | Register | account created | 201 + token |
-| 2 | invalid register cases | Register | form error shown | 400 or 409 |
-| 3 | strong-backend login | Login | session opened | 200 + token |
+| 2 | invalid register cases | Register | form error shown inline (no toast) | 400 or 409 |
+| 3 | strong-backend login | Login | session opened, success toast | 200 + token |
 | 4 | strong-backend passport | Passport Onboarding / `PUT /api/me/passport` | matrix data becomes available | 200 |
 | 5 | Dashboard | Dashboard | top fields and summary render | `/api/me`, `/api/career-matrix` succeed |
 | 6 | Backend CV create/list/update/delete | My CVs | CV cards, edit, delete, version flow | `/api/cvs` CRUD works |
 | 7 | Jobs fetch/import/filter | Jobs | list refreshes, filters update | `/api/jobs/fetch`, `/api/jobs/filter`, `/api/jobs/import-adzuna` |
-| 8 | Recommendations | AI Insights / Recommendations | ranked jobs visible | `/api/recommendations?cvId=` |
-| 9 | Match explanation | Skill Map | matching and missing skills visible | `/api/match` or `/api/match/full` |
-| 10 | Roadmap | Growth Plan | roadmap items generated | `/api/analysis` |
-| 11 | Analytics | Market Signals / Analytics | charts and skill gaps render | `/api/analytics/skills`, `/api/analytics/trends` |
-| 12 | Application create | Application Tracker | new application card appears | `POST /api/applications` |
-| 13 | Application status change | Application Tracker | status badge updates | `PATCH /api/applications/:id/status` |
-| 14 | Profile update | Profile | profile values update | `PUT /api/me` |
-| 15 | Logout then login | Any auth screen | logout works and login reopens session | token removed then restored |
-| 16 | 401 invalid token test | Any protected page | auto logout and redirect | 401 handler fires |
+| 8 | Recommendations | Jobs | ranked jobs visible | `/api/recommendations?cvId=` |
+| 9 | Skill gap analysis | Skill Map | matching and missing skills visible, "Recommended for Growth Plan" section | `/api/match` or `/api/match/full` |
+| 10 | Growth Plan skill selection | Growth Plan | top market gaps shown as selectable chips; select 1–4 → Generate → roadmap from selected skills only | `/api/analysis` |
+| 11 | Skill Map → Growth Plan link | Skill Map → Growth Plan | "Build growth plan" carries top 3 gap skills to Growth Plan pre-selected | — |
+| 12 | AI Insights auto-recalculate | AI Insights | select CV → match + success score auto-fires; change job → results update without manual click | `/api/match/full`, `/api/success-score` |
+| 13 | Best CV for job | AI Insights | click "Best CV for selected job" → ranked CV list | `/api/best-cv/:jobId` |
+| 14 | Analytics | Market Signals | charts and skill gaps render | `/api/analytics/skills`, `/api/analytics/trends` |
+| 15 | Application create | Application Tracker | new application card appears, success toast | `POST /api/applications` |
+| 16 | Application status change | Application Tracker | status badge updates | `PATCH /api/applications/:id/status` |
+| 17 | Similar roles | Application Tracker | similar role suggestions appear after applications exist | `GET /api/applications/similar-roles` |
+| 18 | Certificate upload | Profile | upload PDF or JPG/PNG (max 5 MB) → AI extraction preview with confidence score → save | `POST /api/certificates/extract` |
+| 19 | Toast behavior | Any page | action → bottom-right toast; error toast stays 5 s; success 3 s; × dismisses immediately; no status pill in header | — |
+| 20 | Profile update | Profile | profile values update | `PUT /api/me` |
+| 21 | Logout then login | Any auth screen | logout works and login reopens session | token removed then restored |
+| 22 | 401 invalid token test | Any protected page | auto logout and redirect | 401 handler fires |
+
+## 12a. New Feature Test Cases
+
+### Certificate Upload (UI flow)
+1. Profile → Certificate bölümüne git
+2. "Upload certificate" butonuna tikla
+3. PDF veya JPG/PNG yukle (max 5 MB; Vercel Hobby limit 4.5 MB)
+4. AI extraction sonucunu onizle: title, issuer, date, credentialId confidence score ile
+5. Gerekirse alanlari duzenle → Save
+6. Sertifika karti listede gorunmeli
+7. Edge case: 5 MB+ dosya → multer LIMIT_FILE_SIZE hatasi → error toast
+
+### Growth Plan Skill Selection
+1. Skill Map sayfasina git → job sync sonrasi gap'ler gorunur
+2. "Build growth plan" → Growth Plan sayfasina yonlendirir, top 3 gap pre-selected
+3. 1–4 skill sec → Generate Growth Plan
+4. Roadmap sadece secili skill'lerden uretilmeli
+5. 5. skill secmeye calis → UI max 4 limit uyarisi gostermeli
+6. Reset modal → onay → secim ve plan temizlenir
+
+### AI Insights Auto-Recalculate
+1. AI Insights sayfasina git
+2. CV dropdown'dan bir CV sec → match + success score otomatik calisir (buton tikladmadan)
+3. Job dropdown'dan bir job sec → ayni sekilde otomatik yenilenir
+4. Farkli CV sec → sonuclar yenilenir, onceki sonuc gozukmez
+5. Secim kaldirilirsa → empty state gosterilmeli
+
+### Toast Notification Tests
+1. Herhangi bir action yap (job sync, match run) → bottom-right toast gorunur
+2. Yanlis secimde (no CV selected) → kirmizi error toast (5 s)
+3. Basarili islemde → yesil success toast (3 s)
+4. × butonuna bas → toast hemen kapanir (exit animasyonu ile)
+5. Header'da artik status pill yok — sadece avatar button
+6. 5+ action hizlica yap → max 4 toast ayni anda gorunur
 
 ## 13. Edge Case List
 

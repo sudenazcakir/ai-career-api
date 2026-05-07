@@ -28,7 +28,10 @@ const options = {
       version: "1.0.0",
       description: "API docs for AI-assisted job matching system",
     },
-    servers: [{ url: `http://localhost:${PORT}/api` }],
+    servers: [
+      { url: `http://localhost:${PORT}/api`, description: "Local development" },
+      { url: "https://ai-career-api-eight.vercel.app/api", description: "Production" },
+    ],
     components: {
       securitySchemes: {
         bearerAuth: {
