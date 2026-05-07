@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { FiCamera, FiEdit2, FiLogOut, FiTrash2 } from "react-icons/fi";
+import { createPortal } from "react-dom";
+import { FiCamera, FiEdit2, FiLogOut, FiTrash2, FiX } from "react-icons/fi";
 import CareerMatrixPanel from "../components/account/CareerMatrixPanel";
 import PassportForm from "../components/forms/PassportForm";
 import PhoneField from "../components/forms/PhoneField";
@@ -374,21 +375,31 @@ export default function AccountPage({
         )}
       </section>
 
-      {isPassportModalOpen && (
-        <div className={ui.modalBackdrop} role="presentation">
-          <section aria-modal="true" className={ui.modalWindow} role="dialog">
+      {isPassportModalOpen && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-80 grid place-items-center bg-[rgba(14,14,16,0.45)] p-5"
+          role="presentation"
+          onMouseDown={() => setIsPassportModalOpen(false)}
+        >
+          <section
+            aria-modal="true"
+            className={ui.modalWindow}
+            role="dialog"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
             <div className={ui.modalHead}>
               <div>
                 <p className={ui.eyebrow}>Career Passport</p>
                 <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">Edit professional profile</h2>
               </div>
               <button
-                className={ui.buttonGhost}
+                aria-label="Close passport editor"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-[8px] text-[#6B6B72] transition-colors hover:bg-[#F6F3EC] hover:text-[#0E0E10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3FFF]"
                 disabled={isBusy}
                 type="button"
                 onClick={() => setIsPassportModalOpen(false)}
               >
-                Close
+                <FiX size={16} strokeWidth={1.5} />
               </button>
             </div>
             <PassportForm
@@ -399,7 +410,8 @@ export default function AccountPage({
               submitLabel={isBusy ? "Updating..." : "Update Career Passport"}
             />
           </section>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
