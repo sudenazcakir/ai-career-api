@@ -857,6 +857,7 @@ export default function App() {
   if (!user) {
     return (
       <div className="min-h-screen bg-[#F6F3EC]">
+        <ToastList toasts={toasts} onRemove={removeToast} />
         <Routes>
           <Route
             path="/login"
@@ -914,14 +915,17 @@ export default function App() {
 
   if (showOnboarding) {
     return (
-      <PassportOnboarding
-        isBusy={isBusy}
-        passport={passport}
-        setPassport={setPassport}
-        savePassport={savePassport}
-        skipPassport={skipPassport}
-        user={user}
-      />
+      <>
+        <ToastList toasts={toasts} onRemove={removeToast} />
+        <PassportOnboarding
+          isBusy={isBusy}
+          passport={passport}
+          setPassport={setPassport}
+          savePassport={savePassport}
+          skipPassport={skipPassport}
+          user={user}
+        />
+      </>
     );
   }
 

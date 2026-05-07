@@ -105,7 +105,7 @@ export function friendlyErrorMessage(message) {
   }
 
   if (normalized.includes("invalid email or password")) {
-    return "Email or password is incorrect.";
+    return "Invalid email or password.";
   }
 
   if (normalized.includes("database is not connected")) {

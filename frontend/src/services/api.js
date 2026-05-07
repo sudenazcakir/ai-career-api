@@ -19,7 +19,9 @@ export async function apiRequest(path, options = {}) {
 
   if (!response.ok) {
     if (response.status === 401) {
-      _unauthorizedHandler?.();
+      // Only fire session-expiry handler if the user was already authenticated.
+      // During login/register a 401 means wrong credentials, not an expired session.
+      if (localStorage.getItem("authToken")) _unauthorizedHandler?.();
       const error = new Error(data.error || "Session expired. Please sign in again.");
       error.status = 401;
       throw error;
