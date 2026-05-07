@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { FiAward, FiMap, FiSearch, FiTrendingUp } from "react-icons/fi";
+import { useEffect, useState } from "react";
+import { FiAward, FiMap, FiSearch } from "react-icons/fi";
 import { Empty, ScoreBadge } from "../components/common/DataViews";
 import {
   AnalyticsBar,
@@ -10,31 +10,6 @@ import {
 } from "../components/insights/InsightPanels";
 import { ui } from "../styles/ui";
 
-/* ── Suggested next steps from missing skills ──────────────────────────── */
-const STEP_TEMPLATES = {
-  docker:      "Dockerize a project and push to Docker Hub",
-  kubernetes:  "Deploy an app to a local Kubernetes cluster",
-  aws:         "Deploy a project on the AWS free tier",
-  react:       "Build a small CRUD app with React",
-  typescript:  "Migrate a module to TypeScript with strict mode",
-  python:      "Build a CLI tool and write pytest tests",
-  node:        "Build a REST API with Express and JWT auth",
-  postgresql:  "Study query plans and run a migration",
-  graphql:     "Build a resolver and add auth to a schema",
-  redis:       "Integrate Redis caching into an existing project",
-  java:        "Build a Spring Boot service with JPA persistence",
-  kafka:       "Implement a producer/consumer app with Docker",
-  terraform:   "Provision cloud resources with a Terraform plan",
-  linux:       "Write shell scripts and configure a systemd service",
-  git:         "Master branching strategies and rebase workflow",
-};
-
-function getSuggestedStep(skill) {
-  const lower = skill.toLowerCase();
-  const key = Object.keys(STEP_TEMPLATES).find((k) => lower.includes(k));
-  return key ? STEP_TEMPLATES[key] : `Learn ${skill} core concepts · build a practice project · add to CV`;
-}
-
 function interviewPotentialStyle(level) {
   if (level === "High")   return { background: "var(--c-citron)",    color: "var(--c-ink)" };
   if (level === "Medium") return { background: "var(--c-warning-50)", color: "var(--c-warning)" };
@@ -42,16 +17,14 @@ function interviewPotentialStyle(level) {
 }
 
 export default function InsightsPage({
-  analysisResult,
-  analyzeGaps,
   applications,
   bestCvResult,
-  calculateSuccessScore,
   cvs,
   findBestCv,
   isBusy,
   jobs,
   matchResult,
+  openRoadmap,
   recommendations,
   runInsightMatch,
   skillAnalytics,
@@ -62,6 +35,13 @@ export default function InsightsPage({
   const [insightCvId,  setInsightCvId]  = useState("");
   const [insightJobId, setInsightJobId] = useState("");
 
+  /* Auto-run match + success score whenever CV or job selection changes */
+  useEffect(() => {
+    if (!insightCvId || !insightJobId) return;
+    runInsightMatch(insightCvId, insightJobId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [insightCvId, insightJobId]);
+
   /* Jobs available for matching: tracked applications first, then loaded jobs */
   const appJobs = applications
     .filter((a) => a.job?._id)
@@ -69,15 +49,37 @@ export default function InsightsPage({
     .filter((j, i, arr) => arr.findIndex((x) => x._id === j._id) === i);
 
   const jobOptions = appJobs.length > 0 ? appJobs : jobs;
-  const topJob     = recommendations[0] || jobs[0];
-  const hasJobsForScore = Boolean(topJob);
+  const selectedInsightJob = jobOptions.find((job) => job._id === insightJobId) || null;
+  const hasSelection = Boolean(insightCvId && insightJobId);
 
   function handleRunMatch(e) {
     e.preventDefault();
     runInsightMatch(insightCvId, insightJobId);
   }
 
-  const missingSteps = (matchResult?.missingSkills || []).slice(0, 4);
+  function handleJobChange(event) {
+    const nextJobId = event.target.value;
+    setInsightJobId(nextJobId);
+    if (nextJobId) findBestCv(nextJobId);
+  }
+
+  function handleFindBestCv() {
+    findBestCv(insightJobId);
+  }
+
+  function handleBuildRoadmap() {
+    const missingSkills = (matchResult?.missingSkills || []).slice(0, 4);
+    openRoadmap({
+      cvId: insightCvId || undefined,
+      source: "insights",
+      selectedSkills: missingSkills,
+      recommendedSkills: missingSkills.map((skill) => ({ skill, count: 1, cat: "technical" })),
+      autoGenerate: false,
+      label: matchResult
+        ? "Based on selected CV vs selected job from AI Insights."
+        : "Choose from Skill Map recommendations to build a Growth Plan.",
+    });
+  }
 
   return (
     <div className={ui.pageGrid}>
@@ -90,7 +92,7 @@ export default function InsightsPage({
             Match a CV against a job
           </h2>
           <p className="mt-1 text-[13px] text-[#6B6B72]">
-            Select a CV and a saved or loaded job to calculate a detailed match score.
+            Select a CV and a saved or loaded job — match score and success score update automatically.
           </p>
         </div>
 
@@ -118,7 +120,7 @@ export default function InsightsPage({
             <select
               className={ui.input}
               value={insightJobId}
-              onChange={(e) => setInsightJobId(e.target.value)}
+              onChange={handleJobChange}
             >
               <option value="">Select a job…</option>
               {jobOptions.map((job) => (
@@ -145,11 +147,17 @@ export default function InsightsPage({
         )}
 
         <div className="mt-3 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2 border-t border-[#E8E3D7] pt-3 max-md:grid-cols-1">
-          <button type="button" className={`${ui.buttonSecondary} w-full justify-center`} disabled={isBusy} onClick={findBestCv}>
+          <button
+            type="button"
+            className={`${ui.buttonSecondary} w-full justify-center`}
+            disabled={isBusy || !insightJobId}
+            onClick={handleFindBestCv}
+            title={insightJobId ? "" : "Select a job first"}
+          >
             <FiAward size={14} strokeWidth={1.5} />
-            Best CV for top job
+            Best CV for selected job
           </button>
-          <button type="button" className={`${ui.buttonSecondary} w-full justify-center`} disabled={isBusy} onClick={analyzeGaps}>
+          <button type="button" className={`${ui.buttonSecondary} w-full justify-center`} disabled={isBusy} onClick={handleBuildRoadmap}>
             <FiMap size={14} strokeWidth={1.5} />
             Build roadmap
           </button>
@@ -167,97 +175,11 @@ export default function InsightsPage({
           </div>
           <ScoreBadge value={matchResult?.matchScore} />
         </div>
-        {matchResult ? <MatchExplanation result={matchResult} /> : <Empty msg="Select a CV and a job, then run match." />}
-      </section>
-
-      {/* ── Suggested next steps ──────────────────────────────────────── */}
-      <section className={ui.panel}>
-        <div className={ui.sectionHead}>
-          <div>
-            <p className={ui.eyebrow}>Growth · Next steps</p>
-            <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
-              Suggested next steps
-            </h2>
-          </div>
-          {missingSteps.length > 0 && (
-            <span className={ui.count} style={{ fontFamily: "var(--font-mono)" }}>
-              {missingSteps.length} gaps
-            </span>
-          )}
-        </div>
-        {missingSteps.length > 0 ? (
-          <div className="grid gap-2">
-            {missingSteps.map((skill) => (
-              <div
-                key={skill}
-                className="flex items-start gap-3 rounded-[8px] border-l-2 border-[#5B2A86] bg-[#FBFAF6] px-4 py-3"
-              >
-                <span
-                  className={ui.chipMissing}
-                  style={{ flexShrink: 0, marginTop: 1 }}
-                >
-                  {skill}
-                </span>
-                <p className="text-[13px] leading-relaxed text-[#3A3A40]">
-                  {getSuggestedStep(skill)}
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Empty msg={matchResult ? "No skill gaps — your CV covers all job requirements." : "Run a match to see suggested learning steps."} />
-        )}
-
-        {/* Roadmap section */}
-        {analysisResult?.roadmap?.length > 0 && (
-          <div className="mt-4 border-t border-[#E8E3D7] pt-4">
-            <p className={ui.miniLabel}>Roadmap steps</p>
-            <div className={`${ui.roadmap} mt-2`}>
-              {(analysisResult.roadmap || []).slice(0, 5).map((item, index) => (
-                <p key={item}>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--c-mist)", marginRight: 8 }}>
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  {item.replace(/ -> /g, " · ")}
-                </p>
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* ── Best CV result ────────────────────────────────────────────── */}
-      <section className={`${ui.panel} ${ui.full}`}>
-        <div className={ui.sectionHead}>
-          <div>
-            <p className={ui.eyebrow}>CV ranking · {topJob ? `"${topJob.title}"` : "top ranked job"}</p>
-            <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
-              Best CV for top job
-            </h2>
-            <p className="mt-1 text-[13px] text-[#6B6B72]">
-              Ranked by weighted score: 60% skill overlap, 25% experience alignment, 15% role fit.
-            </p>
-          </div>
-          <span className={ui.count} style={{ fontFamily: "var(--font-mono)" }}>
-            {recommendations.length} ranked jobs
-          </span>
-        </div>
-
-        {topJob?.skills?.length > 0 && (
-          <div className="mb-4">
-            <SkillBlock label="Job requires" skills={topJob.skills.slice(0, 10)} tone="neutral" />
-          </div>
-        )}
-
-        {bestCvResult ? (
-          <BestCvResult result={bestCvResult} />
-        ) : (
-          <Empty msg={hasJobsForScore ? "Click 'Best CV for top job' to see which CV matches best." : "Load jobs or get recommendations first."} />
-        )}
+        {matchResult ? <MatchExplanation result={matchResult} /> : <Empty msg="Select a CV and a job above to see the match breakdown." />}
       </section>
 
       {/* ── Application success score ─────────────────────────────────── */}
-      <section className={`${ui.panel} ${ui.full}`}>
+      <section className={`${ui.panel}`}>
         <div className={ui.sectionHead}>
           <div>
             <p className={ui.eyebrow}>Interview predictor</p>
@@ -266,27 +188,12 @@ export default function InsightsPage({
             </h2>
             <p className="mt-1 text-[13px] text-[#6B6B72]">
               Combines match score, skill gap count, experience depth and CV completeness
-              against your top ranked job.
-              {!hasJobsForScore && (
-                <span className="ml-1 font-medium text-[#A4A4AC]">
-                  Load jobs or get recommendations first.
-                </span>
-              )}
+              for your selected CV and job. Updates automatically on selection change.
             </p>
           </div>
-          <button
-            className={`${ui.buttonCobalt} h-auto min-h-9 w-auto shrink-0 whitespace-normal px-3 py-2 leading-tight max-sm:w-full`}
-            disabled={isBusy || !hasJobsForScore}
-            type="button"
-            onClick={calculateSuccessScore}
-            title={hasJobsForScore ? "" : "Load jobs or get recommendations first"}
-          >
-            <FiTrendingUp size={14} strokeWidth={1.5} />
-            {isBusy ? "Calculating…" : "Calculate score"}
-          </button>
         </div>
 
-        {successScore ? (
+        {successScore && hasSelection ? (
           <div className="grid gap-4">
             <div className="flex flex-wrap items-center gap-3">
               <span
@@ -345,7 +252,37 @@ export default function InsightsPage({
             )}
           </div>
         ) : (
-          <Empty msg={hasJobsForScore ? "No success score yet. Calculate one using your selected CV and top job." : "Load jobs or get recommendations to enable this feature."} />
+          <Empty msg={hasSelection ? "Running…" : "Select a CV and a job above — the score will appear automatically."} />
+        )}
+      </section>
+
+      {/* ── Best CV result ────────────────────────────────────────────── */}
+      <section className={`${ui.panel} ${ui.full}`}>
+        <div className={ui.sectionHead}>
+          <div>
+            <p className={ui.eyebrow}>CV ranking · {selectedInsightJob ? `"${selectedInsightJob.title}"` : "selected job"}</p>
+            <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
+              Best CV for selected job
+            </h2>
+            <p className="mt-1 text-[13px] text-[#6B6B72]">
+              Select a job above, then rank your CVs for that specific role.
+            </p>
+          </div>
+          <span className={ui.count} style={{ fontFamily: "var(--font-mono)" }}>
+            {recommendations.length} ranked jobs
+          </span>
+        </div>
+
+        {selectedInsightJob?.skills?.length > 0 && (
+          <div className="mb-4">
+            <SkillBlock label="Job requires" skills={selectedInsightJob.skills.slice(0, 10)} tone="neutral" />
+          </div>
+        )}
+
+        {bestCvResult ? (
+          <BestCvResult result={bestCvResult} />
+        ) : (
+          <Empty msg={jobOptions.length ? "Select a job above, then click 'Best CV for selected job'." : "Load jobs or save a job first."} />
         )}
       </section>
 

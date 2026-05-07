@@ -29,6 +29,7 @@ import OverviewPage from "./pages/OverviewPage";
 import PassportOnboarding from "./pages/PassportOnboarding";
 import RoadmapPage from "./pages/RoadmapPage";
 import SkillGapPage, { buildSkillGaps } from "./pages/SkillGapPage";
+import { ToastList } from "./components/common/Toast";
 import { getBackendOrigin, setUnauthorizedHandler } from "./services/api";
 import {
   getCurrentUser,
@@ -60,7 +61,6 @@ import {
 } from "./services/careerService";
 import { ui } from "./styles/ui";
 import {
-  firstError,
   friendlyErrorMessage,
   inferExpectedPatternError,
   normalizePhoneNumber,
@@ -125,7 +125,6 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [status, setStatus] = useState("System ready");
   const [authChecked, setAuthChecked] = useState(false);
   const [user, setUser] = useState(null);
   const [authForm, setAuthForm] = useState(emptyUser);
@@ -153,6 +152,7 @@ export default function App() {
   const [recommendations, setRecommendations] = useState([]);
   const [matchResult, setMatchResult] = useState(null);
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [roadmapIntent, setRoadmapIntent] = useState(null);
   const [bestCvResult, setBestCvResult] = useState(null);
   const [successScore, setSuccessScore] = useState(null);
   const [skillAnalytics, setSkillAnalytics] = useState(null);
@@ -163,10 +163,39 @@ export default function App() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [jobsSyncedAt, setJobsSyncedAt] = useState(null);
   const [showLoadingBar, setShowLoadingBar] = useState(false);
+  const [toasts, setToasts] = useState([]);
+  const toastTimersRef = useRef({});
 
   const loadingBarTimerRef = useRef(null);
   const jobsAutoSyncDoneRef = useRef(false);
   const similarApplicationsLoadedRef = useRef(false);
+
+  function addToast(message, type = "info") {
+    if (!message) return;
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setToasts((prev) => [...prev.slice(-3), { id, message, type }]);
+    const duration = type === "error" ? 5000 : 3000;
+    toastTimersRef.current[id] = setTimeout(() => removeToast(id), duration);
+  }
+
+  function removeToast(id) {
+    clearTimeout(toastTimersRef.current[id]);
+    delete toastTimersRef.current[id];
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  function setStatus(message) {
+    if (!message || message === "System ready") return;
+    const lower = message.toLowerCase();
+    const isBlank = lower.startsWith("no ") || lower.includes("no jobs");
+    const isError = !isBlank &&
+      /select|choose|couldn't|could not|failed|invalid|not found|expired|cannot|rejected|load jobs|fill in|error/i
+        .test(lower);
+    const isSuccess = !isError && !isBlank &&
+      /ready|created|updated|deleted|saved|tracked|loaded|imported|ranked|signed|calculated|complete|found/i
+        .test(lower);
+    addToast(message, isError ? "error" : isSuccess ? "success" : "info");
+  }
 
   const applicationStatuses = ["Saved for Later", "Under Review", "Accepted", "Rejected"];
 
@@ -177,22 +206,6 @@ export default function App() {
   const bestJobId = jobs[0]?._id || recommendations[0]?._id;
   const topScore = recommendations[0]?.matchScore ?? jobs[0]?.matchScore ?? 0;
   const isBusy = Boolean(pendingAction);
-
-  const statusType = useMemo(() => {
-    if (pendingAction) return "loading";
-    if (!status || status === "System ready") return "idle";
-    const lower = status.toLowerCase();
-    const errorWords = ["error", "failed", "invalid", "not found", "expired", "couldn't", "cannot", "rejected", "could not", "database is not"];
-    if (errorWords.some((w) => lower.includes(w))) return "error";
-    return "success";
-  }, [status, pendingAction]);
-  const statusLabel = useMemo(() => {
-    if (!status) return "System ready";
-    if (status.includes("OPENAI_API_KEY")) {
-      return status.toLowerCase().includes("cv draft") ? "CV draft ready" : "AI fallback active";
-    }
-    return status;
-  }, [status]);
 
   const activePage =
     pages.find((page) => page.path === location.pathname) || pages[0];
@@ -228,7 +241,22 @@ export default function App() {
   }
 
   function navigatePage(pageId) {
+    if (pageId === "roadmap") setRoadmapIntent(null);
     smoothNavigate(pageById[pageId]?.path || DEFAULT_AUTHENTICATED_PATH);
+  }
+
+  function openRoadmap(intent = {}) {
+    const { cvId, ...rest } = intent;
+    if (cvId) setSelectedCvId(cvId);
+    setRoadmapIntent({
+      source: "roadmap",
+      selectedSkills: [],
+      recommendedSkills: [],
+      autoGenerate: false,
+      label: "",
+      ...rest,
+    });
+    smoothNavigate("/roadmap");
   }
 
   function changeAuthMode(nextMode) {
@@ -369,7 +397,6 @@ export default function App() {
     const nextErrors = validateAuthForm(normalizedAuthForm, currentAuthMode);
     setAuthErrors(nextErrors);
     if (Object.keys(nextErrors).length) {
-      setStatus(firstError(nextErrors));
       return;
     }
 
@@ -380,7 +407,6 @@ export default function App() {
 
     try {
       setPendingAction(currentAuthMode);
-      setStatus(currentAuthMode === "login" ? "Signing in" : "Creating account");
       const data =
         currentAuthMode === "login" ? await loginUser(payload) : await registerUser(payload);
       applyAuthSession(data);
@@ -391,13 +417,11 @@ export default function App() {
     } catch (error) {
       if (error.errors) {
         setAuthErrors(error.errors);
-        setStatus(firstError(error.errors));
         return;
       }
       if (String(error.message || "").toLowerCase().includes("expected pattern")) {
         const inferredErrors = inferExpectedPatternError(normalizedAuthForm);
         setAuthErrors(inferredErrors);
-        setStatus(firstError(inferredErrors));
         return;
       }
       const message = friendlyErrorMessage(error.message);
@@ -484,6 +508,13 @@ export default function App() {
     return () => clearTimeout(loadingBarTimerRef.current);
   }, [pendingAction]);
 
+  // Cleanup pending toast timers on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(toastTimersRef.current).forEach(clearTimeout);
+    };
+  }, []);
+
   // Close mobile sidebar on navigation
   useEffect(() => {
     setMobileSidebarOpen(false);
@@ -504,9 +535,10 @@ export default function App() {
       });
   }, [location.pathname, user, skillAnalytics, trendAnalytics]);
 
-  // Auto-sync jobs on first visit to /jobs
+  // Hydrate jobs from the database once per signed-in session so dependent pages
+  // keep working after refresh without forcing an Adzuna sync.
   useEffect(() => {
-    if (!user || location.pathname !== "/jobs" || jobsAutoSyncDoneRef.current) return;
+    if (!user || jobs.length > 0 || jobsAutoSyncDoneRef.current) return;
     jobsAutoSyncDoneRef.current = true;
 
     const params = new URLSearchParams({ sort: "newest" });
@@ -514,26 +546,18 @@ export default function App() {
     filterJobsByQuery(params)
       .then((data) => {
         const dbJobs = data.data || [];
+        setJobs(dbJobs);
         if (dbJobs.length > 0) {
-          setJobs(dbJobs);
           setJobsSyncedAt(new Date());
-          setStatus(`${dbJobs.length} jobs loaded`);
-        } else {
-          setStatus("Fetching jobs…");
-          return fetchJobsFromAdzuna().then((importData) =>
-            filterJobsByQuery(params).then((filtered) => {
-              setJobs(filtered.data || []);
-              setJobsSyncedAt(new Date());
-              setStatus(`${filtered.data?.length || 0} jobs loaded`);
-              return importData;
-            })
-          );
+          if (location.pathname === "/jobs") setStatus(`${dbJobs.length} jobs loaded`);
+        } else if (location.pathname === "/jobs") {
+          setStatus("No jobs loaded. Use Sync to import jobs.");
         }
       })
       .catch((e) => {
         if (e?.status !== 401) setStatus(`Could not load jobs: ${e.message}`);
       });
-  }, [location.pathname, user]);
+  }, [jobs.length, location.pathname, user]);
 
   // Auto-load similar roles on first visit to /applications
   useEffect(() => {
@@ -550,12 +574,11 @@ export default function App() {
   async function runAction(label, action) {
     try {
       setPendingAction(label);
-      setStatus(label);
       const result = await action();
       return result ?? true;
     } catch (error) {
       if (error.status === 401) return false; // handler already fired via setUnauthorizedHandler
-      setStatus(error.message);
+      addToast(error.message, "error");
       return false;
     } finally {
       setPendingAction("");
@@ -742,28 +765,16 @@ export default function App() {
     });
   }
 
-  function findBestCv() {
-    if (!bestJobId) {
-      setStatus("Load jobs or recommendations first");
+  function findBestCv(jobId = bestJobId) {
+    if (!jobId) {
+      setStatus("Select a job first");
       return;
     }
 
     runAction("Finding best CV for selected job", async () => {
-      const data = await getBestCv(bestJobId);
+      const data = await getBestCv(jobId);
       setBestCvResult(data);
       setStatus("Best CV calculated");
-    });
-  }
-
-  function calculateSuccessScore() {
-    if (!selectedCvId || !bestJobId) {
-      setStatus("Select a CV and load jobs or recommendations first");
-      return;
-    }
-    runAction("Calculating success score", async () => {
-      const data = await getSuccessScore({ cvId: selectedCvId, jobId: bestJobId });
-      setSuccessScore(data);
-      setStatus("Success score ready");
     });
   }
 
@@ -773,19 +784,28 @@ export default function App() {
       return;
     }
     runAction("Calculating match", async () => {
-      const data = await calculateFullMatch({ cvId, jobId });
-      setMatchResult(data);
+      const [matchData, scoreData] = await Promise.all([
+        calculateFullMatch({ cvId, jobId }),
+        getSuccessScore({ cvId, jobId }),
+      ]);
+      setMatchResult(matchData);
+      setSuccessScore(scoreData);
       setStatus("Match ready");
     });
   }
 
-  function analyzeGaps() {
+  function analyzeGaps(selectedSkills = []) {
     const allJobs = [...jobs, ...recommendations].filter((job) => job?._id);
     const uniqueJobs = [...new Map(allJobs.map((job) => [job._id, job])).values()];
     const marketMissingSkills = buildSkillGaps(uniqueJobs, selectedCv?.skills).map(
       (gap) => gap.skill
     );
-    const missingSkills = matchResult?.missingSkills?.length
+    const explicitSkills = Array.isArray(selectedSkills)
+      ? selectedSkills.map((skill) => String(skill || "").trim()).filter(Boolean)
+      : [];
+    const missingSkills = explicitSkills.length
+      ? explicitSkills
+      : matchResult?.missingSkills?.length
       ? matchResult.missingSkills
       : marketMissingSkills;
 
@@ -794,7 +814,7 @@ export default function App() {
       return;
     }
 
-    if (!uniqueJobs.length) {
+    if (!explicitSkills.length && !uniqueJobs.length) {
       setStatus("Load jobs before building a roadmap");
       return;
     }
@@ -810,8 +830,10 @@ export default function App() {
         missingSkills,
       });
 
+      const visibleMilestones = Math.min(missingSkills.length, 4);
+      const visibleTasks = visibleMilestones * 4;
       setAnalysisResult(data);
-      setStatus(`Roadmap ready: ${data.roadmap?.length || 0} steps`);
+      setStatus(`Roadmap ready: ${visibleMilestones} skills, ${visibleTasks} tasks`);
     });
   }
 
@@ -829,9 +851,9 @@ export default function App() {
 
   if (!authChecked) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#eef2f3] p-6">
-        <p className={ui.pulse}>
-          <span className={ui.pulseDot} />
+      <main className="grid min-h-screen place-items-center bg-[#F6F3EC] p-6">
+        <p className={ui.loadingPill}>
+          <span className={ui.loadingDot} />
           Checking session
         </p>
       </main>
@@ -854,7 +876,6 @@ export default function App() {
                 setAuthErrors={setAuthErrors}
                 setAuthMode={changeAuthMode}
                 submitAuth={submitAuth}
-                status={status}
               />
             }
           />
@@ -870,7 +891,6 @@ export default function App() {
                 setAuthErrors={setAuthErrors}
                 setAuthMode={changeAuthMode}
                 submitAuth={submitAuth}
-                status={status}
               />
             }
           />
@@ -920,6 +940,8 @@ export default function App() {
           <div className="lat-loading-bar-fill" />
         </div>
       )}
+
+      <ToastList toasts={toasts} onRemove={removeToast} />
 
       {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
@@ -1033,20 +1055,6 @@ export default function App() {
             </div>
           </div>
           <div className={ui.headerActions}>
-            <div className={`${ui.pulse} ${
-              statusType === "error"   ? "border-[var(--c-danger-50)] bg-[var(--c-danger-50)] text-[var(--c-danger)]" :
-              statusType === "success" ? "border-[var(--c-success-50)] bg-[var(--c-success-50)] text-[var(--c-success)]" :
-              statusType === "loading" ? "border-[var(--c-warning-50)] bg-[var(--c-warning-50)] text-[var(--c-warning)]" :
-              ""
-            }`}>
-              <span className={`${ui.pulseDot} ${
-                statusType === "error"   ? "bg-[var(--c-danger)] animate-pulse" :
-                statusType === "success" ? "bg-[var(--c-success)]" :
-                statusType === "loading" ? "bg-[var(--c-warning)] animate-pulse" :
-                "bg-[#A4A4AC]"
-              }`} />
-              <span className="min-w-0 truncate">{statusLabel}</span>
-            </div>
             <button
               type="button"
               className={ui.accountButton}
@@ -1138,6 +1146,7 @@ export default function App() {
               element={
                 <SkillGapPage
                   jobs={jobs}
+                  openRoadmap={openRoadmap}
                   recommendations={recommendations}
                   selectedCv={selectedCv}
                   setActivePage={navigatePage}
@@ -1154,6 +1163,9 @@ export default function App() {
                   analyzeGaps={analyzeGaps}
                   analysisResult={analysisResult}
                   matchResult={matchResult}
+                  onRoadmapIntentConsumed={() => setRoadmapIntent(null)}
+                  roadmapIntent={roadmapIntent}
+                  roadmapStorageUserId={user?.email || user?._id || user?.id}
                 />
               }
             />
@@ -1187,16 +1199,14 @@ export default function App() {
               path="/insights"
               element={
                 <InsightsPage
-                  analyzeGaps={analyzeGaps}
                   applications={applications}
                   bestCvResult={bestCvResult}
-                  calculateSuccessScore={calculateSuccessScore}
                   cvs={cvs}
                   findBestCv={findBestCv}
                   isBusy={isBusy}
                   jobs={jobs}
                   matchResult={matchResult}
-                  analysisResult={analysisResult}
+                  openRoadmap={openRoadmap}
                   recommendations={recommendations}
                   runInsightMatch={runInsightMatch}
                   skillAnalytics={skillAnalytics}

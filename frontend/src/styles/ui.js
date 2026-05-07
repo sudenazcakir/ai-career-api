@@ -36,10 +36,6 @@ export const ui = {
     "mb-1 text-[11px] font-[500] uppercase tracking-[0.08em] text-[#6B6B72] font-mono",
   pageTitle:
     "max-w-full break-words text-[28px] font-[600] leading-[1.15] tracking-[-0.015em] text-[#0E0E10]",
-  pulse:
-    "inline-flex min-h-[34px] max-w-[min(320px,100%)] min-w-0 overflow-hidden items-center gap-2 rounded-[8px] border border-[#E8E3D7] bg-[#FBFAF6] px-3 text-[11px] font-[500] text-[#6B6B72] font-mono uppercase tracking-[0.04em]",
-  pulseDot:
-    "h-[6px] w-[6px] shrink-0 rounded-full bg-[#0E7C4A]",
   accountButton:
     "grid h-8 min-h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-[#0E0E10] p-0 text-[12px] font-[600] text-[#F6F3EC] transition hover:bg-[#3A3A40] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3FFF] focus-visible:ring-offset-2",
 
@@ -157,6 +153,10 @@ export const ui = {
     "shrink-0 text-[12px] font-[500] text-[#6B6B72] font-mono",
   fieldError:
     "text-[12px] font-[500] text-[#A6261A]",
+  loadingPill:
+    "inline-flex min-h-[34px] min-w-0 items-center gap-2 rounded-[8px] border border-[#E8E3D7] bg-[#FBFAF6] px-3 text-[11px] font-[500] text-[#6B6B72] font-mono uppercase tracking-[0.04em]",
+  loadingDot:
+    "h-[6px] w-[6px] shrink-0 animate-pulse rounded-full bg-[#A4A4AC]",
   passportForm:
     "grid gap-4",
   passportSection:
@@ -203,6 +203,22 @@ export const ui = {
     "border-[#0E0E10] bg-[#F6F3EC]",
   profileSummary:
     "grid min-w-0 gap-2 text-left",
+
+  /* toasts */
+  toastList:
+    "fixed bottom-5 right-5 z-[9999] flex flex-col-reverse gap-2 max-sm:right-3 max-sm:bottom-3",
+  toastBase:
+    "lat-toast flex min-w-0 w-[min(320px,calc(100vw-24px))] items-start gap-3 rounded-[8px] border border-[#E8E3D7] bg-[#FBFAF6] px-3.5 py-3 shadow-[0_8px_24px_rgba(14,14,16,0.10)]",
+  toastSuccess:
+    "border-l-[3px] border-l-[#0E7C4A]",
+  toastError:
+    "border-l-[3px] border-l-[#A6261A]",
+  toastInfo:
+    "border-l-[3px] border-l-[#1E3FFF]",
+  toastDismiss:
+    "ml-auto shrink-0 grid h-5 w-5 place-items-center rounded text-[#A4A4AC] transition-colors hover:text-[#0E0E10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3FFF]",
+  toastMessage:
+    "min-w-0 break-words text-[12px] font-[500] leading-relaxed text-[#3A3A40] font-mono",
 };
 
 /* ── Removed Unsplash background exports — replaced with CSS class ──────── */

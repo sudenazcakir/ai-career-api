@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiBookmark,
   FiCheck,
@@ -132,16 +132,57 @@ export default function JobsPage({
 }) {
   const syncLabel = formatSyncTime(jobsSyncedAt);
   const [selectedJobId, setSelectedJobId] = useState("");
+  const [isDetailClosing, setIsDetailClosing] = useState(false);
+  const [jobListMaxHeight, setJobListMaxHeight] = useState(null);
+  const closeTimerRef = useRef(null);
+  const jobListRef = useRef(null);
   const selectedJob = useMemo(
     () => jobs.find((job, index) => jobKey(job, index) === selectedJobId) || null,
     [jobs, selectedJobId]
   );
   const showReset = hasActiveFilters(filterForm);
 
+  function clearCloseTimer() {
+    if (closeTimerRef.current) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }
+
   useEffect(() => {
     if (!selectedJobId) return;
     const stillExists = jobs.some((job, index) => jobKey(job, index) === selectedJobId);
-    if (!stillExists) setSelectedJobId("");
+    if (!stillExists) {
+      clearCloseTimer();
+      setIsDetailClosing(false);
+      setSelectedJobId("");
+    }
+  }, [jobs, selectedJobId]);
+
+  useEffect(() => () => clearCloseTimer(), []);
+
+  useEffect(() => {
+    const list = jobListRef.current;
+    if (!list || jobs.length <= 6) {
+      setJobListMaxHeight(null);
+      return undefined;
+    }
+
+    function updateJobListHeight() {
+      const children = Array.from(list.children).slice(0, 6);
+      const styles = window.getComputedStyle(list);
+      const gap = parseFloat(styles.rowGap || styles.gap) || 0;
+      const height = children.reduce(
+        (total, child) => total + child.getBoundingClientRect().height,
+        0
+      ) + gap * Math.max(children.length - 1, 0);
+
+      setJobListMaxHeight(Math.ceil(height));
+    }
+
+    updateJobListHeight();
+    window.addEventListener("resize", updateJobListHeight);
+    return () => window.removeEventListener("resize", updateJobListHeight);
   }, [jobs, selectedJobId]);
 
   function update(field, value) {
@@ -149,7 +190,35 @@ export default function JobsPage({
   }
 
   function selectJob(job, index) {
+    clearCloseTimer();
+    setIsDetailClosing(false);
     setSelectedJobId(jobKey(job, index));
+  }
+
+  function finishDetailClose() {
+    clearCloseTimer();
+    setIsDetailClosing(false);
+    setSelectedJobId("");
+  }
+
+  function closeJobDetail() {
+    if (!selectedJobId || isDetailClosing) return;
+
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+
+    if (prefersReducedMotion) {
+      finishDetailClose();
+      return;
+    }
+
+    setIsDetailClosing(true);
+    closeTimerRef.current = window.setTimeout(finishDetailClose, 280);
+  }
+
+  function handleDetailAnimationEnd() {
+    if (isDetailClosing) finishDetailClose();
   }
 
   return (
@@ -394,8 +463,8 @@ export default function JobsPage({
       </section>
 
       <section
-        className={`grid gap-[18px] ${
-          selectedJob ? "lg:grid-cols-[minmax(0,1.02fr)_minmax(360px,0.78fr)]" : "grid-cols-1"
+        className={`jobs-detail-layout ${selectedJob ? "has-detail" : ""} ${
+          isDetailClosing ? "is-closing" : ""
         }`}
       >
         <div className={ui.panel}>
@@ -405,12 +474,20 @@ export default function JobsPage({
               <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
                 {jobs.length > 0 ? `${jobs.length} results` : "No results yet"}
               </h2>
+              <p className="mt-1 max-w-[680px] text-[12px] leading-relaxed text-[#6B6B72]">
+                Match % shows how closely the selected CV fits each role. Fit labels summarize the score band, and skill chips show detected requirements: green means covered, purple means a gap.
+              </p>
             </div>
             <span className={ui.count}>{jobs.length} jobs</span>
           </div>
 
           {jobs.length ? (
-            <div className="grid gap-2.5" data-testid="jobs-list">
+            <div
+              className={`grid gap-2.5 ${jobs.length > 6 ? "overflow-y-auto pr-1" : ""}`}
+              data-testid="jobs-list"
+              ref={jobListRef}
+              style={jobListMaxHeight ? { maxHeight: jobListMaxHeight } : undefined}
+            >
               {jobs.map((job, index) => (
                 <SelectableJobCard
                   isSelected={jobKey(job, index) === selectedJobId}
@@ -418,6 +495,7 @@ export default function JobsPage({
                   key={jobKey(job, index)}
                   onSave={trackApplication}
                   onSelect={() => selectJob(job, index)}
+                  selectedCv={selectedCv}
                 />
               ))}
             </div>
@@ -429,20 +507,24 @@ export default function JobsPage({
         </div>
 
         {selectedJob && (
-          <JobDetailPanel
-            job={selectedJob}
-            onClose={() => setSelectedJobId("")}
-            onSave={trackApplication}
-            selectedCv={selectedCv}
-          />
+          <div className="job-detail-column">
+            <JobDetailPanel
+              isClosing={isDetailClosing}
+              job={selectedJob}
+              onAnimationEnd={handleDetailAnimationEnd}
+              onClose={closeJobDetail}
+              onSave={trackApplication}
+              selectedCv={selectedCv}
+            />
+          </div>
         )}
       </section>
     </div>
   );
 }
 
-function SelectableJobCard({ isSelected, job, onSave, onSelect }) {
-  const requiredRows = getRequiredSkillRows(job, null);
+function SelectableJobCard({ isSelected, job, onSave, onSelect, selectedCv }) {
+  const requiredRows = getRequiredSkillRows(job, selectedCv);
   const gapCount = (job.missingSkills || []).length;
 
   function handleKeyDown(event) {
@@ -465,7 +547,7 @@ function SelectableJobCard({ isSelected, job, onSave, onSelect }) {
       tabIndex={0}
     >
       <div className="min-w-0">
-        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+        <div className="min-w-0">
           <div className="min-w-0">
             <h3 className="truncate text-[17px] font-semibold tracking-[-0.01em] text-[#0E0E10]">
               {job.title}
@@ -474,7 +556,6 @@ function SelectableJobCard({ isSelected, job, onSave, onSelect }) {
               {[job.company, job.location, job.remoteType].filter(Boolean).join(" - ") || "Role details"}
             </p>
           </div>
-          <ScoreBadge value={job.matchScore} />
         </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
@@ -495,20 +576,28 @@ function SelectableJobCard({ isSelected, job, onSave, onSelect }) {
           className={`h-4 w-4 transition-transform ${isSelected ? "translate-x-0 text-[#0E0E10]" : "text-[#A4A4AC]"}`}
           aria-hidden="true"
         />
-        <SaveJobButton job={job} onSave={onSave} />
+        <div className="flex flex-col items-end gap-2">
+          <ScoreBadge value={job.matchScore} />
+          <SaveJobButton job={job} onSave={onSave} />
+        </div>
       </div>
     </article>
   );
 }
 
-function JobDetailPanel({ job, onClose, onSave, selectedCv }) {
+function JobDetailPanel({ isClosing, job, onAnimationEnd, onClose, onSave, selectedCv }) {
   const requiredRows = getRequiredSkillRows(job, selectedCv);
   const matchedCount = requiredRows.filter((row) => row.state === "have").length;
   const gapCount = requiredRows.filter((row) => row.state === "gap").length;
   const partialCount = requiredRows.filter((row) => row.state === "partial").length;
 
   return (
-    <aside className="job-detail-panel sticky top-5 h-max min-w-0 overflow-hidden rounded-[12px] border border-[#E8E3D7] bg-[#FBFAF6] lg:max-h-[calc(100vh-40px)] lg:overflow-y-auto">
+    <aside
+      className={`job-detail-panel sticky top-5 h-max min-w-0 overflow-hidden rounded-[12px] border border-[#E8E3D7] bg-[#FBFAF6] lg:max-h-[calc(100vh-40px)] lg:overflow-y-auto ${
+        isClosing ? "is-closing" : ""
+      }`}
+      onAnimationEnd={onAnimationEnd}
+    >
       <div className="flex items-start justify-between gap-3 border-b border-[#E8E3D7] p-5">
         <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-[0.12em] text-[#6B6B72] font-mono">

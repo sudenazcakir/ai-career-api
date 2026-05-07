@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { FiBriefcase, FiFileText, FiMap } from "react-icons/fi";
 import { Empty } from "../components/common/DataViews";
 import { ui } from "../styles/ui";
@@ -53,11 +54,14 @@ const CAT_COLORS = {
   domain:    { chip: "bg-[#E5F4EC] text-[#0E7C4A]", bar: "#0E7C4A" },
 };
 
-export default function SkillGapPage({ jobs, recommendations, selectedCv, setActivePage }) {
+export default function SkillGapPage({ jobs, openRoadmap, recommendations, selectedCv, setActivePage }) {
   const allJobs    = [...jobs, ...recommendations].filter((j) => j?._id);
   const uniqueJobs = [...new Map(allJobs.map((j) => [j._id, j])).values()];
   const gaps       = buildSkillGaps(uniqueJobs, selectedCv?.skills);
+  const recommendedGaps = gaps.slice(0, 3);
   const maxCount   = gaps[0]?.count || 1;
+  const [gapListMaxHeight, setGapListMaxHeight] = useState(null);
+  const gapListRef = useRef(null);
 
   const byCategory = {
     technical: gaps.filter((g) => g.cat === "technical"),
@@ -73,6 +77,45 @@ export default function SkillGapPage({ jobs, recommendations, selectedCv, setAct
   const hasCv   = Boolean(selectedCv);
 
   const heroDescription = buildHeroDescription(hasCv, hasJobs, selectedCv?.title, uniqueJobs.length, gaps.length);
+
+  function handleBuildGrowthPlan() {
+    const selectedSkills = recommendedGaps.map((gap) => gap.skill);
+    if (typeof openRoadmap === "function") {
+      openRoadmap({
+        source: "skill-map",
+        selectedSkills,
+        recommendedSkills: recommendedGaps,
+        autoGenerate: false,
+        label: "Based on your most frequent Skill Map gaps",
+      });
+      return;
+    }
+    setActivePage("roadmap");
+  }
+
+  useEffect(() => {
+    const list = gapListRef.current;
+    if (!list || gaps.length <= 12) {
+      setGapListMaxHeight(null);
+      return undefined;
+    }
+
+    function updateGapListHeight() {
+      const children = Array.from(list.children).slice(0, 12);
+      const styles = window.getComputedStyle(list);
+      const gap = parseFloat(styles.rowGap || styles.gap) || 0;
+      const height = children.reduce(
+        (total, child) => total + child.getBoundingClientRect().height,
+        0
+      ) + gap * Math.max(children.length - 1, 0);
+
+      setGapListMaxHeight(Math.ceil(height));
+    }
+
+    updateGapListHeight();
+    window.addEventListener("resize", updateGapListHeight);
+    return () => window.removeEventListener("resize", updateGapListHeight);
+  }, [gaps]);
 
   return (
     <div className="grid gap-[18px]">
@@ -106,7 +149,7 @@ export default function SkillGapPage({ jobs, recommendations, selectedCv, setAct
             {heroDescription}
           </p>
           <div className="mt-5 flex flex-wrap gap-2.5">
-            <button className={ui.buttonCobalt} type="button" onClick={() => setActivePage("roadmap")}>
+            <button className={ui.buttonCobalt} type="button" onClick={handleBuildGrowthPlan} disabled={!recommendedGaps.length}>
               <FiMap size={14} strokeWidth={1.5} />
               Build growth plan
             </button>
@@ -184,6 +227,36 @@ export default function SkillGapPage({ jobs, recommendations, selectedCv, setAct
           <section className={ui.panel}>
             <div className={ui.sectionHead}>
               <div>
+                <p className={ui.eyebrow}>Recommended for Growth Plan</p>
+                <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
+                  Start with your top market gaps
+                </h2>
+                <p className="mt-1 max-w-[680px] text-[13px] leading-relaxed text-[#6B6B72]">
+                  These are your most frequent missing skills across the jobs analysed. You can adjust the final roadmap selection on the Growth Plan page.
+                </p>
+              </div>
+              <button className={ui.buttonCobalt} type="button" onClick={handleBuildGrowthPlan}>
+                <FiMap size={14} strokeWidth={1.5} />
+                Use recommended skills
+              </button>
+            </div>
+            <div className={ui.chips}>
+              {recommendedGaps.map((gap) => (
+                <span
+                  key={gap.skill}
+                  className={`inline-flex items-center gap-1 rounded-[4px] px-2 py-0.5 text-[11px] font-medium ${CAT_COLORS[gap.cat]?.chip || ui.chipMissing}`}
+                  style={{ fontFamily: "var(--font-mono)" }}
+                >
+                  {gap.skill}
+                  <span className="opacity-60">{gap.count}x</span>
+                </span>
+              ))}
+            </div>
+          </section>
+
+          <section className={ui.panel}>
+            <div className={ui.sectionHead}>
+              <div>
                 <p className={ui.eyebrow}>Most-needed skills you don't have</p>
                 <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
                   Market frequency
@@ -194,8 +267,12 @@ export default function SkillGapPage({ jobs, recommendations, selectedCv, setAct
               </span>
             </div>
 
-            <div className="grid gap-2.5">
-              {gaps.slice(0, 12).map((g, i) => (
+            <div
+              className={`grid gap-2.5 ${gaps.length > 12 ? "overflow-y-auto pr-1" : ""}`}
+              ref={gapListRef}
+              style={gapListMaxHeight ? { maxHeight: gapListMaxHeight } : undefined}
+            >
+              {gaps.map((g, i) => (
                 <div
                   key={g.skill}
                   className="grid items-center gap-2"

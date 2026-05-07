@@ -116,9 +116,24 @@ img, canvas { max-width: 100%; }
   .route-transition { animation: none; }
 }
 
+.jobs-detail-layout {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.job-detail-column {
+  min-width: 0;
+}
+
 .job-detail-panel {
   animation: job-detail-slide-in 240ms var(--ease-out) both;
   will-change: opacity, transform;
+}
+
+.job-detail-panel.is-closing {
+  animation: job-detail-slide-in 240ms var(--ease-out) reverse both;
+  pointer-events: none;
 }
 
 @keyframes job-detail-slide-in {
@@ -128,6 +143,32 @@ img, canvas { max-width: 100%; }
 
 @media (prefers-reduced-motion: reduce) {
   .job-detail-panel { animation: none; }
+  .job-detail-panel.is-closing { animation: none; }
+}
+
+@media (min-width: 1024px) {
+  .jobs-detail-layout {
+    grid-template-columns: minmax(0, 1fr) 0px;
+    transition: grid-template-columns 240ms var(--ease-out);
+    will-change: grid-template-columns;
+  }
+
+  .jobs-detail-layout.has-detail {
+    grid-template-columns: minmax(0, 1fr) clamp(360px, 39vw, 470px);
+  }
+
+  .jobs-detail-layout.has-detail.is-closing {
+    grid-template-columns: minmax(0, 1fr) 0px;
+  }
+
+  .job-detail-column {
+    width: clamp(360px, 39vw, 470px);
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jobs-detail-layout { transition: none; }
 }
 
 /* ── Loading bar ───────────────────────────────────────────────────────── */
@@ -166,4 +207,24 @@ img, canvas { max-width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .roadmap-progress-fill { animation: none; width: 95%; }
+}
+
+/* ── Toast notifications ───────────────────────────────────────────────── */
+@keyframes lat-toast-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+@keyframes lat-toast-out {
+  from { opacity: 1; transform: translateY(0)   scale(1); }
+  to   { opacity: 0; transform: translateY(4px) scale(0.96); }
+}
+.lat-toast {
+  animation: lat-toast-in 220ms var(--ease-out) both;
+}
+.lat-toast.is-leaving {
+  animation: lat-toast-out 180ms var(--ease-std) both;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lat-toast, .lat-toast.is-leaving { animation: none; }
 }
