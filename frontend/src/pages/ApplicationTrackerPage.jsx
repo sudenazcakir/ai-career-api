@@ -1,5 +1,6 @@
-import { FiBriefcase, FiSearch, FiX } from "react-icons/fi";
-import { Empty, JobList } from "../components/common/DataViews";
+import { useState } from "react";
+import { FiBriefcase, FiChevronDown, FiChevronUp, FiSearch, FiX } from "react-icons/fi";
+import { Empty, ScoreBadge } from "../components/common/DataViews";
 import { getStatusClass, ui } from "../styles/ui";
 
 function formatDate(dateString) {
@@ -14,7 +15,7 @@ function formatDate(dateString) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export default function ApplicationsPage({
+export default function ApplicationTrackerPage({
   applications,
   applicationStatuses = ["Saved for Later", "Under Review", "Accepted", "Rejected"],
   deleteApplication,
@@ -149,12 +150,82 @@ export default function ApplicationsPage({
           </button>
         </div>
         {similarApplications.length > 0 ? (
-          <JobList items={similarApplications} />
+          <div className={ui.jobList}>
+            {similarApplications.slice(0, 6).map((job) => (
+              <SimilarRoleCard key={job._id || job.title} job={job} />
+            ))}
+          </div>
         ) : (
           <Empty msg="No similar roles yet. Apply to more jobs to surface recommendations." />
         )}
       </section>
     </div>
+  );
+}
+
+function SimilarRoleCard({ job }) {
+  const [open, setOpen] = useState(false);
+  const panelId = `why-${job._id || job.title}`;
+  const skills = (job.skills || []).slice(0, 5);
+
+  return (
+    <article className={ui.jobRow}>
+      <div className="min-w-0 flex-1">
+        <h3 className="text-[15px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
+          {job.title}
+          {(job.company || job.location) && (
+            <span className="ml-1.5 font-normal text-[#6B6B72]">
+              · {job.company || job.location}
+            </span>
+          )}
+        </h3>
+        <div className={`${ui.chips} mt-2`}>
+          {skills.map((skill) => (
+            <span key={skill} className={ui.chip}>{skill}</span>
+          ))}
+        </div>
+
+        {Array.isArray(job.whySimilar) && job.whySimilar.length > 0 && (
+          <div className="mt-2">
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-controls={panelId}
+              className="inline-flex items-center gap-1 text-[12px] font-medium text-[#1E3FFF] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E3FFF] focus-visible:ring-offset-1"
+              onClick={() => setOpen((v) => !v)}
+            >
+              Why similar?
+              {open ? <FiChevronUp size={12} /> : <FiChevronDown size={12} />}
+            </button>
+            {open && (
+              <ul
+                id={panelId}
+                aria-label="Reasons this role is similar"
+                className="mt-1.5 grid gap-1"
+              >
+                {job.whySimilar.map((reason) => (
+                  <li key={reason} className="text-[12px] text-[#3A3A40]">
+                    · {reason}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="flex shrink-0 flex-col items-end gap-1 self-start">
+        <ScoreBadge value={job.matchScore} />
+        {job.level && (
+          <p
+            className="text-[10px] font-medium uppercase tracking-[0.06em] text-[#6B6B72]"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            {job.level}
+          </p>
+        )}
+      </div>
+    </article>
   );
 }
 

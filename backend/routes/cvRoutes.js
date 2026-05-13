@@ -1,6 +1,22 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const CV = require("../models/CV");
+const multer = require("multer");
+const pdfParse = require("pdf-parse");
+const { parseCvText } = require("../services/cvParser");
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter(req, file, cb) {
+    const allowed = ["application/pdf", "text/plain"];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PDF and TXT files are accepted"));
+    }
+  },
+});
 
 const router = express.Router();
 
@@ -542,6 +558,212 @@ router.post("/rank-for-job", async (req, res) => {
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message });
   }
+});
+
+/**
+ * @swagger
+ * /cvs/upload:
+ *   post:
+ *     summary: Parse a CV file and return extracted fields for review
+ *     description: Accepts a PDF or TXT file (max 5 MB). Extracts title, summary, skills, experience, projects, education, and certifications using rule-based parsing. Does NOT save — the client reviews extracted fields and saves separately. Rate limited to 10 uploads per user per hour.
+ *     tags: [CVs]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [file]
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: PDF or TXT file, max 5 MB
+ *     responses:
+ *       200:
+ *         description: Extracted CV fields
+ *       400:
+ *         description: No file uploaded or unsupported file type
+ *       413:
+ *         description: File exceeds 5 MB limit
+ *       429:
+ *         description: Rate limit exceeded (10 uploads per hour)
+ */
+router.post(
+  "/upload",
+  (req, res, next) => {
+    if (!router._uploadCounts) router._uploadCounts = {};
+    const key = `${req.user._id}_${Math.floor(Date.now() / 3_600_000)}`;
+    router._uploadCounts[key] = (router._uploadCounts[key] || 0) + 1;
+    if (router._uploadCounts[key] > 10) {
+      return res.status(429).json({ error: "Upload limit reached (10 per hour)" });
+    }
+    next();
+  },
+  upload.single("file"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      let rawText = "";
+
+      if (req.file.mimetype === "application/pdf") {
+        const parsed = await pdfParse(req.file.buffer);
+        rawText = parsed.text || "";
+      } else {
+        rawText = req.file.buffer.toString("utf-8");
+      }
+
+      rawText = rawText.replace(/<[^>]*>/g, " ").replace(/\s{3,}/g, "\n\n");
+
+      const cvFields = parseCvText(rawText);
+
+      res.json({ success: true, data: cvFields });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /cvs/{id}/ai-version:
+ *   post:
+ *     summary: Generate an AI-optimised CV version for review (does not save)
+ *     description: |
+ *       Applies one of four optimisation modes to the source CV and returns a proposed version with
+ *       a list of changes and warnings. The result is NOT saved — the client shows the diff and the
+ *       user chooses to save via POST /cvs/:id/version. Falls back to rule-based output when
+ *       OPENAI_API_KEY is not configured.
+ *
+ *       **Modes:**
+ *       - `ats_optimize` — move job-matching skills to front, add target role keyword to summary
+ *       - `role_tailor` — prioritise experience/projects by relevance to target job
+ *       - `concise` — cap bullets at 4 items, shorten entries to 100 chars
+ *       - `seniority_boost` — prepend strong action verbs to experience and project bullets
+ *     tags: [CVs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Source CV ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [mode]
+ *             properties:
+ *               mode:
+ *                 type: string
+ *                 enum: [ats_optimize, role_tailor, concise, seniority_boost]
+ *               targetJobId:
+ *                 type: string
+ *                 description: Optional job ID to tailor the version toward
+ *               instructions:
+ *                 type: string
+ *                 description: Optional free-text instructions for the AI (max 500 chars)
+ *     responses:
+ *       200:
+ *         description: Proposed CV with changes and warnings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     proposedCv:
+ *                       type: object
+ *                     changes:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           field:
+ *                             type: string
+ *                           type:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                     warnings:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           message:
+ *                             type: string
+ *                     modelInfo:
+ *                       type: object
+ *       400:
+ *         description: Invalid CV id or missing/invalid mode
+ *       404:
+ *         description: CV not found or not owned by user
+ */
+router.post("/:id/ai-version", async (req, res) => {
+  try {
+    if (CV.db.readyState !== 1) {
+      return res.status(503).json({ error: "Database is not connected" });
+    }
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid CV id" });
+    }
+
+    const { MODES, generateAiVersion, getJob } = require("../services/cvAiVersioningService");
+    const { mode, targetJobId, instructions } = req.body;
+
+    if (!mode || !MODES.includes(mode)) {
+      return res.status(400).json({ error: `mode must be one of: ${MODES.join(", ")}` });
+    }
+
+    const source = await CV.findOne({ _id: id, owner: req.user._id });
+    if (!source) {
+      return res.status(404).json({ error: "CV not found" });
+    }
+
+    const job = await getJob(targetJobId || null);
+    const proposedCv = await generateAiVersion({
+      cv: source.toObject(),
+      job,
+      mode,
+      instructions: typeof instructions === "string" ? instructions.slice(0, 500) : undefined,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        proposedCv,
+        changes: proposedCv.changes,
+        warnings: proposedCv.warnings,
+        modelInfo: proposedCv.modelInfo,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.use((err, req, res, next) => {
+  if (err.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({ error: "File is too large (max 5 MB)" });
+  }
+  if (err.message === "Only PDF and TXT files are accepted") {
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
 });
 
 module.exports = router;

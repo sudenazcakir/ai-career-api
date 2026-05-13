@@ -11,7 +11,7 @@ export function getGapsForSource(source, { jobs, uniqueJobs, recommendations, se
           cat: categorizeSkill(item.skill),
         }));
       }
-      return buildSkillGaps(jobs.filter((j) => j?._id), cvSkills);
+      return [];
     }
     case "target_job": {
       if (!targetJob) return [];
@@ -23,7 +23,9 @@ export function getGapsForSource(source, { jobs, uniqueJobs, recommendations, se
     case "similar_roles":
       return buildSkillGaps(recommendations.filter((r) => r?._id), cvSkills);
     case "cv_gaps":
+      return buildSkillGaps(uniqueJobs, cvSkills);
     default:
+      console.warn(`getGapsForSource: unknown source "${source}", falling back to cv_gaps`);
       return buildSkillGaps(uniqueJobs, cvSkills);
   }
 }

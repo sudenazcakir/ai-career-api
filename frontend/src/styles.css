@@ -228,3 +228,81 @@ img, canvas { max-width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   .lat-toast, .lat-toast.is-leaving { animation: none; }
 }
+
+/* ── Auth page entrance animations ───────────────────────────────────────── */
+@keyframes lat-auth-from-top {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lat-auth-from-below {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lat-auth-headline-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lat-auth-numeral-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 0.28; transform: translateY(0); }
+}
+
+@keyframes lat-auth-from-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes lat-dot-drift {
+  0%, 100% { transform: translate(0, 0); }
+  50%       { transform: translate(3px, 2px); }
+}
+
+/* Entrance classes — apply once on mount; animation runs automatically */
+.lat-dot-anim      { animation: lat-dot-drift       10s  ease-in-out             infinite; }
+.lat-auth-brand    { animation: lat-auth-from-top   320ms cubic-bezier(0.22,1,0.36,1)  80ms both; will-change: opacity, transform; }
+.lat-auth-headline { animation: lat-auth-headline-in 400ms cubic-bezier(0.22,1,0.36,1) 180ms both; will-change: opacity, transform; }
+.lat-auth-feat-1   { animation: lat-auth-from-below 360ms cubic-bezier(0.22,1,0.36,1) 320ms both; will-change: opacity, transform; }
+.lat-auth-feat-2   { animation: lat-auth-from-below 360ms cubic-bezier(0.22,1,0.36,1) 420ms both; will-change: opacity, transform; }
+.lat-auth-feat-3   { animation: lat-auth-from-below 360ms cubic-bezier(0.22,1,0.36,1) 520ms both; will-change: opacity, transform; }
+.lat-auth-numeral  { animation: lat-auth-numeral-in 500ms cubic-bezier(0.22,1,0.36,1) 420ms both; will-change: opacity, transform; }
+.lat-auth-right    { animation: lat-auth-from-right 380ms cubic-bezier(0.22,1,0.36,1) 200ms both; will-change: opacity, transform; }
+
+/* Form-mode crossfade */
+.lat-auth-fields {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.lat-auth-fields.is-switching {
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
+
+/* Submit button micro-interactions */
+.lat-auth-submit {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.lat-auth-submit:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+.lat-auth-submit:active:not(:disabled) {
+  opacity: 1;
+  transform: translateY(0) scale(0.98);
+  transition-duration: 0.08s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lat-dot-anim,
+  .lat-auth-brand,
+  .lat-auth-headline,
+  .lat-auth-feat-1,
+  .lat-auth-feat-2,
+  .lat-auth-feat-3,
+  .lat-auth-numeral,
+  .lat-auth-right    { animation: none; }
+  .lat-auth-fields   { transition: none; }
+  .lat-auth-submit   { transition: none; }
+}

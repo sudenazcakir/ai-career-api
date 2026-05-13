@@ -568,9 +568,13 @@ Window: `rounded-[20px]`, Paper bg, `--shadow-lg`.
 ## 6. Page-specific guidelines
 
 ### AuthPage
-- Split layout: dotted-grid Bone left panel (55%) + Paper right panel (45%)
-- Left: brand mark, Instrument Serif headline (italic emphasis), 01/02/03 trio cards, big Mist numeral watermark
-- Right: `rounded-[20px]` form area, Ink/Bone toggle pair (Sign in / Sign up), Lattice inputs
+- Split layout: animated Bone left panel (52%) + Paper right panel (48%)
+- Left panel uses a **canvas-based interactive dot animation** (`<canvas ref={canvasRef}>` absolutely positioned, pointer-events none) — dots drift with perlin-like noise and push away from the mouse cursor. This replaces the static `lat-dot-grid` CSS class used on other hero sections. The canvas `useEffect` checks `prefers-reduced-motion` and skips rendering entirely when the user has enabled reduced motion.
+- Left: brand mark (`.lat-auth-brand` entrance animation), Instrument Serif headline + subtitle (`.lat-auth-headline`), three stacked **descriptive feature cards** (`.lat-auth-feat-1/2/3` staggered entrance) each with a numbered icon box + title + one-sentence description (Career Passport / Live role matches / Skill gap roadmap), big Mist decorative numeral watermark (`.lat-auth-numeral`)
+- Right panel (`.lat-auth-right`): `rounded-[20px]` form area, Ink/Bone toggle pair (Sign in / Sign up), Lattice inputs
+- Form fields wrapped in `.lat-auth-fields` div that applies a crossfade transition (`opacity` + `translateY`) when switching between sign-in and sign-up modes via `isSwitching` state
+- Submit button uses `.lat-auth-submit` for hover (`translateY(-1px)`) and press (`scale(0.98)`) micro-interactions
+- All entrance animations and transitions disabled under `prefers-reduced-motion: reduce` (guard in `styles.css`)
 - No dark backgrounds, no gradients, no photos
 - On `max-lg`: left panel hidden, right panel full-width
 
@@ -931,4 +935,4 @@ import FieldError from "../components/common/FieldError";
 ---
 
 *Generated from the implemented source — `styles.css`, `styles/ui.js`, and all page components.*
-*Last updated: 2026-05-06.*
+*Last updated: 2026-05-13.*

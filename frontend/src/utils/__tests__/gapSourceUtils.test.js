@@ -9,7 +9,7 @@ describe("getGapsForSource", () => {
     makeJob("j1", ["React", "Docker", "Kubernetes"]),
     makeJob("j2", ["Docker", "TypeScript"]),
   ];
-  const recommendations = [makeJob("r1", ["AWS", "Docker"])];
+  const recommendations = [makeJob("r1", ["AWS", "Terraform"])];
   const uniqueJobs = jobs;
   const baseCtx = {
     jobs,
@@ -47,18 +47,15 @@ describe("getGapsForSource", () => {
     expect(result[1].count).toBe(5);
   });
 
-  it("market_trends: falls back to jobs list when skillAnalytics is null", () => {
+  it("market_trends: returns empty array when skillAnalytics is null", () => {
     const result = getGapsForSource("market_trends", baseCtx);
-    const skills = result.map((r) => r.skill);
-    expect(skills).toContain("Docker");
-    expect(skills).not.toContain("React");
+    expect(result).toEqual([]);
   });
 
-  it("market_trends: falls back when skillAnalytics.data is empty array", () => {
+  it("market_trends: returns empty array when skillAnalytics.data is empty", () => {
     const ctx = { ...baseCtx, skillAnalytics: { data: [] } };
     const result = getGapsForSource("market_trends", ctx);
-    const skills = result.map((r) => r.skill);
-    expect(skills).toContain("Docker");
+    expect(result).toEqual([]);
   });
 
   it("market_trends and cv_gaps: return different results when skillAnalytics present", () => {
@@ -92,7 +89,16 @@ describe("getGapsForSource", () => {
     const result = getGapsForSource("similar_roles", baseCtx);
     const skills = result.map((r) => r.skill);
     expect(skills).toContain("AWS");
+    expect(skills).toContain("Terraform");
+    expect(skills).not.toContain("Node.js");
+    expect(skills).not.toContain("Docker"); // Docker is in jobs but NOT in recommendations
+  });
+
+  it("unknown source: falls back to cv_gaps behaviour", () => {
+    const result = getGapsForSource("nonexistent_source", baseCtx);
+    const skills = result.map((r) => r.skill);
     expect(skills).toContain("Docker");
+    expect(skills).not.toContain("React");
     expect(skills).not.toContain("Node.js");
   });
 });

@@ -18,6 +18,13 @@ export function createCvVersion(cvId, payload = {}) {
   });
 }
 
+export function generateAiVersion(cvId, payload) {
+  return apiRequest(`/api/cvs/${cvId}/ai-version`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function compareCvProfiles(leftCvId, rightCvId) {
   return apiRequest("/api/cvs/compare", {
     method: "POST",

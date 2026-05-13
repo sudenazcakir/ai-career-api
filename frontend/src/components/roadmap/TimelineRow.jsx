@@ -1,3 +1,4 @@
+// frontend/src/components/roadmap/TimelineRow.jsx
 import { ui } from "../../styles/ui";
 
 function circleClass(isActive, isCompleted) {
@@ -5,6 +6,12 @@ function circleClass(isActive, isCompleted) {
   if (isActive)    return "bg-[#1E3FFF] text-white shadow-[0_6px_18px_rgba(30,63,255,0.18)]";
   return "border border-[#E8E3D7] bg-white text-[#A4A4AC]";
 }
+
+const DIFFICULTY_STYLES = {
+  beginner:     "bg-[#E5F4EC] text-[#0E7C4A]",
+  intermediate: "bg-[#E6EBFF] text-[#1E3FFF]",
+  advanced:     "bg-[#FEF9E7] text-[#B45309]",
+};
 
 export default function TimelineRow({
   stage,
@@ -16,8 +23,6 @@ export default function TimelineRow({
   isCompleted,
 }) {
   return (
-    /* Desktop: [140px week] [56px circle] [1fr content]
-       Mobile:  [36px circle] [1fr content] — week label moves into content area */
     <div className="relative grid grid-cols-[140px_56px_1fr] items-start gap-4 max-sm:grid-cols-[36px_1fr] max-sm:gap-3">
 
       {/* Week label — hidden on mobile */}
@@ -30,9 +35,8 @@ export default function TimelineRow({
         </span>
       </div>
 
-      {/* Circle indicator — self-stretch so the column fills the full row height */}
+      {/* Circle indicator */}
       <div className="relative self-stretch flex justify-center pt-2 max-sm:justify-start">
-        {/* Vertical dotted line: left:50% centers it in this column regardless of width */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-y-0 max-sm:hidden"
@@ -48,12 +52,12 @@ export default function TimelineRow({
           ) : (
             <span className="text-[13px] font-semibold">{index + 1}</span>
           )}
-        </div>{/* end circle */}
-      </div>{/* end circle column */}
+        </div>
+      </div>
 
       {/* Content */}
       <div className="pb-6">
-        {/* Week label badge — mobile only */}
+        {/* Week label — mobile only */}
         <div className="mb-2 hidden max-sm:block">
           <span
             className="inline-flex items-center rounded-[4px] bg-[#E6EBFF] px-2 py-0.5 text-[10px] font-medium text-[#1E3FFF]"
@@ -75,8 +79,39 @@ export default function TimelineRow({
           )}
         </div>
 
+        {/* Category + difficulty */}
+        {(stage.category || stage.difficulty) && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {stage.category && (
+              <span
+                className="rounded-[4px] bg-[#F6F3EC] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] text-[#6B6B72]"
+                style={{ fontFamily: "var(--font-mono)" }}
+              >
+                {stage.category}
+              </span>
+            )}
+            {stage.difficulty && (
+              <span
+                className={`rounded-[4px] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] ${DIFFICULTY_STYLES[stage.difficulty] || DIFFICULTY_STYLES.intermediate}`}
+                style={{ fontFamily: "var(--font-mono)" }}
+                aria-label={`Difficulty: ${stage.difficulty}`}
+              >
+                {stage.difficulty}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Prerequisites */}
+        {stage.prerequisites?.length > 0 && (
+          <p className="mt-2 text-[12px] leading-relaxed text-[#6B6B72]">
+            <span className="font-medium text-[#3A3A40]">Requires:</span>{" "}
+            {stage.prerequisites.join(", ")}
+          </p>
+        )}
+
         {/* Step checklist */}
-        <ul className="mt-3 grid gap-2">
+        <ul className="mt-3 grid gap-2" aria-label={`Learning steps for ${stage.skill}`}>
           {stage.steps.map((step, si) => {
             const done = !!stepsCompleted[si];
             return (
@@ -114,7 +149,6 @@ export default function TimelineRow({
                     {step}
                   </span>
                 </button>
-
                 <span
                   className="shrink-0 text-[10px] font-medium text-[#A4A4AC]"
                   style={{ fontFamily: "var(--font-mono)" }}
@@ -125,6 +159,27 @@ export default function TimelineRow({
             );
           })}
         </ul>
+
+        {/* Project idea */}
+        {stage.projectIdea && (
+          <div className="mt-4 rounded-[8px] border border-dashed border-[#E8E3D7] bg-[#F6F3EC] px-3 py-2.5">
+            <p
+              className="text-[10px] font-medium uppercase tracking-[0.07em] text-[#6B6B72]"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              Project idea
+            </p>
+            <p className="mt-0.5 text-[13px] leading-relaxed text-[#3A3A40]">{stage.projectIdea}</p>
+          </div>
+        )}
+
+        {/* Proof of work */}
+        {stage.proofOfWork && (
+          <p className="mt-2.5 text-[12px] leading-relaxed text-[#6B6B72]">
+            <span className="font-medium text-[#0E0E10]">Proof of work:</span>{" "}
+            {stage.proofOfWork}
+          </p>
+        )}
       </div>
     </div>
   );

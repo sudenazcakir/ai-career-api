@@ -2,8 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FiCheck, FiCopy, FiEdit2, FiEye, FiGitBranch, FiSave, FiTrash2, FiX, FiZap } from "react-icons/fi";
 import { ui } from "../styles/ui";
+import { CvPreview } from "../components/cv/CvPreview";
+import { CvQualityPanel } from "../components/cv/CvQualityPanel";
+import { CvTemplateSelector } from "../components/cv/CvTemplateSelector";
+import { CvUploadReview } from "../components/cv/CvUploadReview";
+import { CvAiVersionModal } from "../components/cv/CvAiVersionModal";
 
-export default function CvPage({
+export default function MyCvsPage({
   clearEditMode,
   compareCvId,
   compareSelectedCvs,
@@ -15,7 +20,10 @@ export default function CvPage({
   editingCvId,
   generateCvFromPassport,
   isBusy,
+  jobs,
   loadCvIntoForm,
+  onAiVersionSave,
+  onUploadSave,
   passport,
   saveCv,
   selectedCv,
@@ -30,6 +38,8 @@ export default function CvPage({
   const libraryListRef = useRef(null);
   const [libraryMaxHeight, setLibraryMaxHeight] = useState(null);
   const [previewCv, setPreviewCv] = useState(null);
+  const [aiVersionCv, setAiVersionCv] = useState(null);
+  const [template, setTemplate] = useState("classic");
 
   useEffect(() => {
     const list = libraryListRef.current;
@@ -132,6 +142,13 @@ export default function CvPage({
               Fill in your Career Passport to enable auto-generation.
             </p>
           )}
+        </div>
+
+        <div className="mb-4 flex flex-wrap items-start gap-3">
+          <CvUploadReview isBusy={isBusy} onSave={onUploadSave} />
+          <p className="text-[12px] text-[#6B6B72] mt-2">
+            Upload a PDF or TXT file — you review extracted fields before saving.
+          </p>
         </div>
 
         <form
@@ -314,6 +331,16 @@ export default function CvPage({
                   <button
                     type="button"
                     disabled={isBusy}
+                    onClick={() => setAiVersionCv(cv)}
+                    className="inline-flex h-7 items-center gap-1 rounded-[6px] border border-[#E8E3D7] bg-transparent px-2.5 text-[11px] font-medium text-[#3A3A40] transition-colors hover:border-[#A4A4AC] hover:text-[#0E0E10] disabled:opacity-50"
+                    aria-label={`Create AI version of ${cv.title}`}
+                  >
+                    <FiZap size={11} strokeWidth={1.5} />
+                    AI Version
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isBusy}
                     onClick={() => loadCvIntoForm(cv)}
                     className="inline-flex h-7 items-center gap-1 rounded-[6px] border border-[#E8E3D7] bg-transparent px-2.5 text-[11px] font-medium text-[#3A3A40] transition-colors hover:border-[#A4A4AC] hover:text-[#0E0E10] disabled:opacity-50"
                   >
@@ -438,6 +465,15 @@ export default function CvPage({
         </div>
       </section>
 
+      {aiVersionCv && (
+        <CvAiVersionModal
+          sourceCv={aiVersionCv}
+          jobs={jobs}
+          onSave={onAiVersionSave}
+          onClose={() => setAiVersionCv(null)}
+        />
+      )}
+
       {previewCv && typeof document !== "undefined" && createPortal(
         <div
           className="fixed inset-0 z-[80] grid place-items-center bg-[rgba(14,14,16,0.38)] p-5"
@@ -467,7 +503,13 @@ export default function CvPage({
                 <FiX size={16} strokeWidth={1.5} />
               </button>
             </div>
-            <ProfessionalCvPreview cv={previewCv} />
+            <div className="grid gap-4">
+              <div className="flex items-center justify-between gap-3">
+                <CvTemplateSelector value={template} onChange={setTemplate} />
+              </div>
+              <CvPreview cv={previewCv} template={template} />
+              <CvQualityPanel cv={previewCv} />
+            </div>
           </section>
         </div>,
         document.body
@@ -476,7 +518,7 @@ export default function CvPage({
   );
 }
 
-/* ── CV Preview ─────────────────────────────────────────────────────────── */
+/* ── CV Library ─────────────────────────────────────────────────────────── */
 
 function CvLibrarySummary({ cv }) {
   const skillCount = (cv.skills || []).length;
@@ -555,104 +597,6 @@ function CompareCvCard({ accent, cv, empty, label }) {
       ) : (
         <p className="text-[13px] text-[#6B6B72]">{empty}</p>
       )}
-    </article>
-  );
-}
-
-function ProfessionalCvPreview({ cv }) {
-  const hasContent =
-    (cv.projects?.length || 0) +
-    (cv.experience?.length || 0) +
-    (cv.education?.length || 0) +
-    (cv.certifications?.length || 0) > 0;
-
-  return (
-    <div className="overflow-hidden rounded-[14px] border border-[#E8E3D7] bg-[#F6F3EC]">
-      <div className="grid gap-5 border-b border-[#E8E3D7] bg-[#FBFAF6] p-6 md:grid-cols-[minmax(0,1fr)_220px]">
-        <div className="min-w-0">
-          <p className={ui.eyebrow}>Professional CV</p>
-          <h3
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "clamp(34px,5vw,56px)",
-              lineHeight: 0.98,
-              letterSpacing: "-0.02em",
-              color: "var(--c-ink)",
-              fontWeight: 400,
-            }}
-          >
-            {cv.title}
-          </h3>
-          <p className="mt-3 text-[15px] text-[#3A3A40]">
-            {cv.type || "General"} profile · {cv.version || "v1"}
-          </p>
-          {cv.summary && (
-            <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-[#3A3A40]">
-              {cv.summary}
-            </p>
-          )}
-        </div>
-        <aside className="grid content-start gap-3 rounded-[10px] border border-[#E8E3D7] bg-[#F6F3EC] p-4">
-          <PreviewStat label="Skills" value={(cv.skills || []).length} />
-          <PreviewStat label="Experience" value={(cv.experience || []).length} />
-          <PreviewStat label="Projects" value={(cv.projects || []).length} />
-        </aside>
-      </div>
-
-      <div className="grid gap-5 p-6 md:grid-cols-[240px_minmax(0,1fr)]">
-        <aside className="min-w-0">
-          <p className={ui.miniLabel}>Core skills</p>
-          {(cv.skills || []).length > 0 ? (
-            <div className={`${ui.chips} mt-2`}>
-              {cv.skills.map((skill) => (
-                <span className={ui.chip} key={skill}>{skill}</span>
-              ))}
-            </div>
-          ) : (
-            <p className={ui.muted}>No skills added.</p>
-          )}
-        </aside>
-
-        <div className="grid min-w-0 gap-4">
-          {(cv.experience || []).length > 0 && <PreviewList title="Experience" items={cv.experience} />}
-          {(cv.projects || []).length > 0 && <PreviewList title="Selected projects" items={cv.projects} />}
-          <div className="grid gap-4 md:grid-cols-2">
-            {(cv.education || []).length > 0 && <PreviewList title="Education" items={cv.education} />}
-            {(cv.certifications || []).length > 0 && <PreviewList title="Certifications" items={cv.certifications} />}
-          </div>
-          {!cv.summary && (cv.skills || []).length === 0 && !hasContent && (
-            <p className={ui.muted}>No content yet. Edit this CV to add details.</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PreviewStat({ label, value }) {
-  return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#E8E3D7] pb-2 last:border-b-0 last:pb-0">
-      <span className={ui.metricLabel}>{label}</span>
-      <strong className="text-[18px] font-semibold text-[#0E0E10]">{value}</strong>
-    </div>
-  );
-}
-
-function PreviewList({ title, items }) {
-  return (
-    <article className="min-w-0 rounded-[10px] border border-[#E8E3D7] bg-[#F6F3EC] p-3">
-      <p className={ui.miniLabel}>{title}</p>
-      <ul className="mt-2 grid gap-1.5">
-        {items.map((item, i) => (
-          <li key={i} className="flex min-w-0 gap-2 text-[13px] text-[#3A3A40]">
-            <span
-              aria-hidden="true"
-              className="mt-[7px] h-[5px] w-[5px] shrink-0 rounded-full bg-[#A4A4AC]"
-            />
-            <span className="min-w-0 break-words">{item}</span>
-          </li>
-        ))}
-      </ul>
     </article>
   );
 }
@@ -821,6 +765,22 @@ function ComparisonFieldCard({ field }) {
         <FieldCount label="Compared only" value={field.onlyRight.length} />
       </div>
     </article>
+  );
+}
+
+function PreviewList({ title, items }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div>
+      <p className={ui.miniLabel}>{title}</p>
+      <ul className="mt-1.5 grid gap-1">
+        {items.map((item, i) => (
+          <li key={i} className="truncate text-[12px] leading-relaxed text-[#3A3A40]">
+            · {item}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

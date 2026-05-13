@@ -1,7 +1,8 @@
-import { FiRefreshCw } from "react-icons/fi";
+import { FiMap, FiRefreshCw } from "react-icons/fi";
 import { Empty } from "../components/common/DataViews";
 import { TrendSummary } from "../components/insights/InsightPanels";
 import { ui } from "../styles/ui";
+import { categorizeSkill } from "../utils/skillUtils";
 
 const STATUS_BAR = {
   "Saved for Later": { fill: "#6B6B72", label: "Saved" },
@@ -10,13 +11,14 @@ const STATUS_BAR = {
   "Rejected":        { fill: "#5B2A86", label: "Rejected" },
 };
 
-export default function AnalyticsPage({
+export default function MarketSignalsPage({
   applications,
   jobs,
+  loadAnalytics,
+  openRoadmap,
   recommendations,
   skillAnalytics,
   trendAnalytics,
-  loadAnalytics,
 }) {
   const skillFrequency = skillAnalytics?.data || [];
   const meta           = skillAnalytics?.meta;
@@ -95,23 +97,43 @@ export default function AnalyticsPage({
             <div>
               <p className={ui.eyebrow}>
                 {meta
-                  ? `${meta.cvCount} CV${meta.cvCount === 1 ? "" : "s"} × ${meta.jobCount} job${meta.jobCount === 1 ? "" : "s"}`
-                  : "All CVs × all jobs"}
+                  ? `${meta.cvCount} CV${meta.cvCount === 1 ? "" : "s"} × ${meta.jobCount} job${meta.jobCount === 1 ? "" : "s"} — portfolio-wide`
+                  : "All CVs × all jobs — portfolio-wide"}
               </p>
               <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
                 Missing skill frequency
               </h2>
               <p className="mt-0.5 text-[13px] text-[#6B6B72]">
                 {meta
-                  ? `Skills your CVs are missing across ${meta.comparisons} CV–job comparisons.`
-                  : "Skills required by jobs that your CVs don't currently cover."}
+                  ? `All ${meta.cvCount} of your CVs compared against ${meta.jobCount} jobs in the database — ${meta.comparisons} CV–job pair${meta.comparisons === 1 ? "" : "s"}.`
+                  : "All your CVs compared against every job in the database."}
               </p>
             </div>
-            {meta && (
-              <span className={ui.count} style={{ fontFamily: "var(--font-mono)" }}>
-                {skillFrequency.length} skills
-              </span>
-            )}
+            <div className="flex shrink-0 items-center gap-2">
+              {meta && (
+                <span className={ui.count} style={{ fontFamily: "var(--font-mono)" }}>
+                  {skillFrequency.length} skills
+                </span>
+              )}
+              {typeof openRoadmap === "function" && skillFrequency.length > 0 && (
+                <button
+                  className={ui.buttonSecondary}
+                  type="button"
+                  onClick={() => {
+                    const topSkills = skillFrequency.slice(0, 3);
+                    openRoadmap({
+                      source: "market",
+                      selectedSkills: topSkills.map((s) => s.skill),
+                      recommendedSkills: topSkills.map((s) => ({ skill: s.skill, count: s.missingCount, cat: categorizeSkill(s.skill) })),
+                      label: "Based on portfolio-wide Market Signals",
+                    });
+                  }}
+                >
+                  <FiMap size={14} strokeWidth={1.5} />
+                  Use in Growth Plan
+                </button>
+              )}
+            </div>
           </div>
 
           {skillFrequency.length > 0 ? (
@@ -129,7 +151,14 @@ export default function AnalyticsPage({
                     {i + 1}
                   </span>
                   <span className="truncate text-[13px] text-[#0E0E10]">{item.skill}</span>
-                  <div className="h-[4px] overflow-hidden rounded-[2px] bg-[#E8E3D7]">
+                  <div
+                    className="h-[4px] overflow-hidden rounded-[2px] bg-[#E8E3D7]"
+                    role="progressbar"
+                    aria-label={`${item.skill}: missing from ${item.missingCount} CV–job comparison${item.missingCount === 1 ? "" : "s"}`}
+                    aria-valuemin={0}
+                    aria-valuemax={maxMissing}
+                    aria-valuenow={item.missingCount}
+                  >
                     <div
                       className="h-full rounded-[2px] transition-all"
                       style={{

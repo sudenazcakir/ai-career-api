@@ -16,7 +16,7 @@ function interviewPotentialStyle(level) {
   return { background: "var(--c-danger-50)", color: "var(--c-danger)" };
 }
 
-export default function InsightsPage({
+export default function AiInsightsPage({
   applications,
   bestCvResult,
   cvs,

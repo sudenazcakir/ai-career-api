@@ -96,7 +96,7 @@ async function createAvatarDataUrl(file) {
   }
 }
 
-export default function AccountPage({
+export default function ProfilePage({
   isBusy,
   passport,
   renderAvatar,

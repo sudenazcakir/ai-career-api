@@ -2,33 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { FiBriefcase, FiFileText, FiMap } from "react-icons/fi";
 import { Empty } from "../components/common/DataViews";
 import { ui } from "../styles/ui";
-
-const SKILL_CATEGORIES = {
-  tools:  ["docker","kubernetes","aws","ci/cd","terraform","linux","git","github","jenkins","nginx","redis","kafka","elasticsearch"],
-  domain: ["agile","scrum","microservices","rest api","graphql","oauth","jwt","tdd","ddd","solid"],
-};
-
-function categorizeSkill(skill) {
-  const lower = skill.toLowerCase();
-  if (SKILL_CATEGORIES.tools.some((t) => lower.includes(t)))  return "tools";
-  if (SKILL_CATEGORIES.domain.some((d) => lower.includes(d))) return "domain";
-  return "technical";
-}
-
-export function buildSkillGaps(jobs, cvSkills) {
-  const cvSet = new Set((cvSkills || []).map((s) => s.toLowerCase()));
-  const freq = {};
-  for (const job of jobs) {
-    for (const skill of job.skills || []) {
-      if (!cvSet.has(skill.toLowerCase())) {
-        freq[skill] = (freq[skill] || 0) + 1;
-      }
-    }
-  }
-  return Object.entries(freq)
-    .map(([skill, count]) => ({ skill, count, cat: categorizeSkill(skill) }))
-    .sort((a, b) => b.count - a.count);
-}
+import { buildSkillGaps } from "../utils/skillUtils";
 
 function buildHeroDescription(hasCv, hasJobs, cvTitle, jobCount, gapCount) {
   if (hasCv && hasJobs) {
@@ -54,7 +28,7 @@ const CAT_COLORS = {
   domain:    { chip: "bg-[#E5F4EC] text-[#0E7C4A]", bar: "#0E7C4A" },
 };
 
-export default function SkillGapPage({ jobs, openRoadmap, recommendations, selectedCv, setActivePage }) {
+export default function SkillMapPage({ jobs, openRoadmap, recommendations, selectedCv, setActivePage }) {
   const allJobs    = [...jobs, ...recommendations].filter((j) => j?._id);
   const uniqueJobs = [...new Map(allJobs.map((j) => [j._id, j])).values()];
   const gaps       = buildSkillGaps(uniqueJobs, selectedCv?.skills);
@@ -257,10 +231,13 @@ export default function SkillGapPage({ jobs, openRoadmap, recommendations, selec
           <section className={ui.panel}>
             <div className={ui.sectionHead}>
               <div>
-                <p className={ui.eyebrow}>Most-needed skills you don't have</p>
+                <p className={ui.eyebrow}>Your CV vs loaded jobs</p>
                 <h2 className="text-[18px] font-semibold tracking-[-0.005em] text-[#0E0E10]">
-                  Market frequency
+                  CV skill gap frequency
                 </h2>
+                <p className="mt-0.5 text-[13px] text-[#6B6B72]">
+                  Skills required by the {uniqueJobs.length} job{uniqueJobs.length === 1 ? "" : "s"} you have loaded, filtered to those missing from &ldquo;{selectedCv?.title || "your CV"}&rdquo;.
+                </p>
               </div>
               <span className={ui.count} style={{ fontFamily: "var(--font-mono)" }}>
                 {gaps.length} gaps
@@ -290,7 +267,14 @@ export default function SkillGapPage({ jobs, openRoadmap, recommendations, selec
                   >
                     {g.skill}
                   </span>
-                  <div className="h-[4px] overflow-hidden rounded-[2px] bg-[#E8E3D7]">
+                  <div
+                    className="h-[4px] overflow-hidden rounded-[2px] bg-[#E8E3D7]"
+                    role="progressbar"
+                    aria-label={`${g.skill}: missing from ${g.count} job${g.count === 1 ? "" : "s"}`}
+                    aria-valuemin={0}
+                    aria-valuemax={maxCount}
+                    aria-valuenow={g.count}
+                  >
                     <div
                       className="h-full rounded-[2px] transition-all"
                       style={{

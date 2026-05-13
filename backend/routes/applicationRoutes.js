@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const Application = require("../models/Application");
 const CV = require("../models/CV");
 const Job = require("../models/Job");
+const { findSimilarRoles } = require("../services/similarRoles");
 
 const router = express.Router();
 const APPLICATION_STATUSES = new Set(["Saved for Later", "Under Review", "Accepted", "Rejected"]);
@@ -114,54 +115,14 @@ router.get("/applications/similar-roles", async (req, res) => {
       return res.json({ success: true, data: [] });
     }
 
-    // Build applied job IDs set for exclusion
     const appliedJobIds = applications
       .map((a) => a.job?._id?.toString())
-      .filter(Boolean);
+      .filter((id) => id && mongoose.Types.ObjectId.isValid(id));
 
-    // Extract skills from applied jobs; weight non-rejected apps higher
-    const skillFreq = {};
-    for (const app of applications) {
-      const weight = app.status === "Rejected" ? 0.4 : 1;
-      for (const skill of app.job?.skills || []) {
-        const key = skill.toLowerCase();
-        skillFreq[key] = (skillFreq[key] || 0) + weight;
-      }
-    }
+    const candidates = await Job.find({ _id: { $nin: appliedJobIds } }).limit(60);
 
-    // Top 6 skills by frequency
-    const topSkills = Object.entries(skillFreq)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6)
-      .map(([skill]) => skill);
-
-    if (topSkills.length === 0) {
-      return res.json({ success: true, data: [] });
-    }
-
-    // Fetch candidate jobs not already applied to (limit scan to 60)
-    const validExclusions = appliedJobIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
-    const candidates = await Job.find({
-      _id: { $nin: validExclusions },
-    }).limit(60);
-
-    const topSkillsSet = new Set(topSkills);
-
-    // Score by skill overlap with top skills
-    const scored = candidates
-      .map((job) => {
-        const jobSkillsLower = new Set((job.skills || []).map((s) => s.toLowerCase()));
-        const overlap = topSkills.filter((s) => jobSkillsLower.has(s)).length;
-        return {
-          ...job.toObject(),
-          matchScore: Math.round((overlap / topSkillsSet.size) * 100),
-        };
-      })
-      .filter((job) => job.matchScore > 0)
-      .sort((a, b) => b.matchScore - a.matchScore)
-      .slice(0, 6);
-
-    res.json({ success: true, data: scored });
+    const data = findSimilarRoles(applications, candidates);
+    res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
